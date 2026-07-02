@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Zap, Crown, Rocket } from "lucide-react";
+import { Check, Zap, Crown, Rocket, Lock } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ const plans = [
     cta: "Start Free",
     href: "/auth/signup",
     popular: false,
+    comingSoon: false,
   },
   {
     name: "Pro",
@@ -41,9 +42,10 @@ const plans = [
       "Real-time WebSocket data",
       "Priority support",
     ],
-    cta: "Start Pro Trial",
-    href: "/auth/signup?plan=pro",
+    cta: "Coming Soon",
+    href: "#",
     popular: true,
+    comingSoon: true,
   },
   {
     name: "Institutional",
@@ -62,8 +64,9 @@ const plans = [
       "Custom data integrations",
     ],
     cta: "Contact Sales",
-    href: "/contact",
+    href: "#",
     popular: false,
+    comingSoon: true,
   },
 ];
 
@@ -83,28 +86,19 @@ export default function Pricing() {
           </div>
           <h2 className="section-heading mb-4">
             Start free, upgrade when{" "}
-            <span className="gradient-text-green">you're ready</span>
+            <span className="gradient-text-green">you&apos;re ready</span>
           </h2>
           <p className="section-subheading max-w-xl mx-auto mb-8">
-            No hidden fees. Cancel anytime. Your first month of Pro is free.
+            No hidden fees. Cancel anytime. Paid plans launching soon.
           </p>
 
-          {/* Toggle */}
           <div className="inline-flex items-center gap-3 p-1 rounded-xl border border-white/10 bg-white/5">
-            <button
-              onClick={() => setAnnual(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                !annual ? "bg-white/10 text-white" : "text-white/40"
-              }`}
-            >
+            <button onClick={() => setAnnual(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!annual ? "bg-white/10 text-white" : "text-white/40"}`}>
               Monthly
             </button>
-            <button
-              onClick={() => setAnnual(true)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                annual ? "bg-white/10 text-white" : "text-white/40"
-              }`}
-            >
+            <button onClick={() => setAnnual(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${annual ? "bg-white/10 text-white" : "text-white/40"}`}>
               Annual
               <span className="badge-green text-[10px]">Save 20%</span>
             </button>
@@ -122,23 +116,37 @@ export default function Pricing() {
                 className={`glass-card p-6 relative transition-all duration-300 flex flex-col ${
                   plan.popular
                     ? "border-purple-500/30 shadow-glow-purple scale-[1.02]"
+                    : plan.comingSoon
+                    ? "opacity-60"
                     : "hover:border-white/10"
                 }`}
               >
-                {plan.popular && (
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold"
-                    style={{ background: "#8b5cf6", color: "#fff" }}
-                  >
+                {/* Coming Soon overlay */}
+                {plan.comingSoon && (
+                  <div className="absolute inset-0 rounded-2xl flex items-center justify-center z-10 pointer-events-none">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10"
+                      style={{ background: "rgba(10,11,15,0.8)", backdropFilter: "blur(8px)" }}>
+                      <Lock className="w-3.5 h-3.5 text-white/40" />
+                      <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Coming Soon</span>
+                    </div>
+                  </div>
+                )}
+
+                {plan.popular && !plan.comingSoon && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold"
+                    style={{ background: "#8b5cf6", color: "#fff" }}>
+                    Most Popular
+                  </div>
+                )}
+                {plan.popular && plan.comingSoon && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold bg-white/10 text-white/40">
                     Most Popular
                   </div>
                 )}
 
                 <div className="mb-6">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: `${plan.color}15`, border: `1px solid ${plan.color}25` }}
-                  >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                    style={{ background: `${plan.color}15`, border: `1px solid ${plan.color}25` }}>
                     <Icon className="w-5 h-5" style={{ color: plan.color }} />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
@@ -147,9 +155,7 @@ export default function Pricing() {
 
                 <div className="mb-6">
                   {price === 0 ? (
-                    <div>
-                      <span className="text-4xl font-black text-white">Free</span>
-                    </div>
+                    <div><span className="text-4xl font-black text-white">Free</span></div>
                   ) : (
                     <div className="flex items-end gap-1">
                       <span className="text-4xl font-black text-white">${price}</span>
@@ -157,9 +163,7 @@ export default function Pricing() {
                     </div>
                   )}
                   {annual && price > 0 && (
-                    <p className="text-xs text-white/30 mt-1">
-                      Billed annually (${price * 12}/yr)
-                    </p>
+                    <p className="text-xs text-white/30 mt-1">Billed annually (${price * 12}/yr)</p>
                   )}
                 </div>
 
@@ -172,17 +176,17 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <Link
-                  href={plan.href}
-                  className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                    plan.popular
-                      ? "btn-primary"
-                      : "btn-secondary"
-                  }`}
-                  style={plan.popular ? {} : { borderColor: `${plan.color}20` }}
-                >
-                  {plan.cta}
-                </Link>
+                {plan.comingSoon ? (
+                  <div className="w-full text-center py-3 rounded-xl font-semibold text-sm border border-white/10 text-white/30 cursor-not-allowed">
+                    Coming Soon
+                  </div>
+                ) : (
+                  <Link href={plan.href}
+                    className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${plan.popular ? "btn-primary" : "btn-secondary"}`}
+                    style={plan.popular ? {} : { borderColor: `${plan.color}20` }}>
+                    {plan.cta}
+                  </Link>
+                )}
               </div>
             );
           })}

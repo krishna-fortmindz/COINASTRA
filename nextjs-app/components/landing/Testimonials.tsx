@@ -19,7 +19,7 @@ const testimonials = [
     avatarColor: "#8b5cf6",
     stars: 5,
     quote:
-      "We were spending hours manually aggregating sentiment from Twitter, Reddit, and on-chain data. AI Trading Copilot does it in real-time and surfaces actionable insights I actually trust.",
+      "We were spending hours manually aggregating sentiment from Twitter, Reddit, and on-chain data. Coinastra does it in real-time and surfaces actionable insights I actually trust.",
   },
   {
     name: "Marcus Williams",

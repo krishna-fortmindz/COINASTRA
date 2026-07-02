@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Zap, ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Page Not Found",
+  description: "The page you're looking for doesn't exist. Head back to Coinastra and keep trading smarter.",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (

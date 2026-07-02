@@ -1,45 +1,32 @@
 import type { MetadataRoute } from "next";
+import { getAllPosts } from "@/lib/blog";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aitradingcopilot.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.site";
   const now = new Date();
+
+  const posts = getAllPosts();
+
+  const blogPostEntries: MetadataRoute.Sitemap = posts.map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.dateISO),
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
 
   return [
     {
       url: baseUrl,
       lastModified: now,
       changeFrequency: "daily",
-      priority: 1,
+      priority: 1.0,
     },
     {
       url: `${baseUrl}/blog`,
-      lastModified: now,
-      changeFrequency: "daily",
+      lastModified: new Date(posts[0]?.dateISO ?? "2026-04-28"),
+      changeFrequency: "weekly",
       priority: 0.9,
     },
-    {
-      url: `${baseUrl}/blog/bitcoin-market-memory-oct-2024`,
-      lastModified: new Date("2026-04-28"),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/blog/crypto-sentiment-trading-guide`,
-      lastModified: new Date("2026-04-15"),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/auth/login`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/auth/signup`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.6,
-    },
+    ...blogPostEntries,
   ];
 }

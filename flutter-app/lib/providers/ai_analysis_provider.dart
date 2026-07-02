@@ -12,6 +12,6 @@ class AiAnalysisNotifier extends ChangeNotifier {
   }
 }
 
-final aiAnalysisProvider = ChangeNotifierProvider.autoDispose(
+final aiAnalysisProvider = ChangeNotifierProvider(
   (ref) => AiAnalysisNotifier(),
 );

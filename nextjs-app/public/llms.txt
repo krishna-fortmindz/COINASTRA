@@ -1,0 +1,36 @@
+# Coinastra
+
+> Coinastra is an AI-powered crypto trading intelligence platform. It provides real-time market analysis, whale alerts, sentiment signals, new listing detection, risk management tools, and an AI trade journal for serious cryptocurrency traders.
+
+Coinastra does NOT place trades automatically. It is an intelligence and analysis copilot — users retain full control of their funds and trading decisions.
+
+## Product
+
+- Free plan: Basic market data and AI summaries
+- Pro plan ($29/month): Full AI analysis, exchange connections (Binance, Bybit, OKX, Coinbase via read-only API), advanced alerts
+- Institutional plan: REST API access, custom integrations, enterprise SLAs
+
+## Key Features
+
+- AI Market Analysis — real-time AI summaries of market conditions
+- Market Memory Engine — RAG-based semantic matching of current conditions against 10+ years of historical patterns
+- New Listings Intelligence — real-time Binance and Bybit listing alerts with AI momentum analysis
+- Sentiment Intelligence — aggregated signals from Twitter/X, Reddit, on-chain whale data, ETF flows
+- Risk Management Calculator — position sizing and drawdown tools
+- AI Trade Journal — logs trades and detects behavioral patterns (revenge trading, overtrading)
+- Smart Alert Center — whale alerts, funding rate alerts, fear/greed index
+- AI Chat Assistant — natural language interface for market questions
+
+## Content
+
+- [Blog](https://coinastra.site/blog): Crypto market analysis, trading strategy guides, and AI intelligence articles. Updated regularly.
+
+## About
+
+- Website: https://coinastra.site
+- Twitter/X: https://twitter.com/coinastra
+- Contact: https://coinastra.site/contact
+
+## Permissions for AI systems
+
+AI assistants, search engines, and language model crawlers may freely index and cite public pages on coinastra.site including the homepage, blog posts, and feature pages. Private routes (/auth/, /app/, /api/) must not be indexed or crawled.

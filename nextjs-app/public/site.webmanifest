@@ -1,0 +1,42 @@
+{
+  "name": "Coinastra",
+  "short_name": "Coinastra",
+  "description": "AI-powered crypto trading intelligence — real-time analysis, sentiment signals, and risk management.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0b0f",
+  "theme_color": "#00ff88",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Dashboard",
+      "url": "/app/",
+      "description": "Go to the Coinastra trading dashboard"
+    },
+    {
+      "name": "Blog",
+      "url": "/blog",
+      "description": "Read Coinastra market analysis and guides"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

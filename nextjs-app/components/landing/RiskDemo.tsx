@@ -1,12 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, AlertTriangle, TrendingDown, Zap } from "lucide-react";
+
+function fmtPrice(p: number): string {
+  if (!p) return "—";
+  if (p >= 10000) return `$${p.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return `$${p.toFixed(2)}`;
+}
 
 export default function RiskDemo() {
   const [capital, setCapital] = useState(10000);
   const [leverage, setLeverage] = useState(5);
   const [riskPercent, setRiskPercent] = useState(2);
+  const [btcPrice, setBtcPrice] = useState<number | null>(null);
+  const [btcChange, setBtcChange] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/market/coins")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((coins: any[]) => {
+        const btc = Array.isArray(coins) && coins.find((c: any) =>
+          c.symbol === "btc" || c.id === "bitcoin"
+        );
+        if (btc?.current_price) setBtcPrice(btc.current_price);
+        if (btc?.price_change_percentage_24h != null) setBtcChange(btc.price_change_percentage_24h);
+      })
+      .catch(() => {});
+  }, []);
 
   const positionSize = (capital * riskPercent) / 100;
   const liquidationDistance = 100 / leverage;
@@ -25,11 +46,29 @@ export default function RiskDemo() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Calculator */}
           <div className="glass-card p-6 order-2 lg:order-1">
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2 mb-4">
               <Shield className="w-4 h-4 text-[#f59e0b]" />
               <span className="text-sm font-semibold text-white">Position Size Calculator</span>
               <div className="ml-auto badge-green text-[10px]">Interactive Demo</div>
             </div>
+            {btcPrice && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg mb-4"
+                style={{ background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
+                  <span className="text-xs text-white/40 font-mono">BTC Live Price</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-white">{fmtPrice(btcPrice)}</span>
+                  {btcChange != null && (
+                    <span className="text-[10px] font-mono font-semibold"
+                      style={{ color: btcChange >= 0 ? "#00ff88" : "#ff3366" }}>
+                      {btcChange >= 0 ? "+" : ""}{btcChange.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-5">
               {/* Capital */}

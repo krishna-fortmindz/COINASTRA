@@ -1,27 +1,29 @@
 import Link from "next/link";
 import { Zap, Twitter, Github, MessageCircle } from "lucide-react";
 
+const FLUTTER_BASE =
+  process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
+
 const footerLinks = {
   Product: [
-    { label: "Dashboard", href: "/app/dashboard" },
-    { label: "AI Analysis", href: "/app/analysis" },
-    { label: "Market Memory", href: "/app/memory" },
-    { label: "New Listings", href: "/app/listings" },
-    { label: "AI Chat", href: "/app/chat" },
-    { label: "Pricing", href: "/#pricing" },
+    { label: "Dashboard",    href: `${FLUTTER_BASE}/dashboard` },
+    { label: "AI Analysis",  href: `${FLUTTER_BASE}/analysis` },
+    { label: "Market Memory",href: `${FLUTTER_BASE}/charts` },
+    { label: "Sentiment",    href: `${FLUTTER_BASE}/sentiment` },
+    { label: "AI Chat",      href: `${FLUTTER_BASE}/chat` },
   ],
   Company: [
-    { label: "About", href: "/about" },
-    { label: "Blog", href: "/blog" },
-    { label: "Careers", href: "/careers" },
-    { label: "Contact", href: "/contact" },
-    { label: "Status", href: "https://status.aitradingcopilot.com" },
+    { label: "About",    href: "/about" },
+    { label: "Blog",     href: "/blog" },
+    { label: "Careers",  href: "/careers" },
+    { label: "Contact",  href: "/contact" },
+    { label: "Status",   href: "https://status.coinastra.site" },
   ],
   Legal: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms of Service", href: "/terms" },
-    { label: "Risk Disclaimer", href: "/disclaimer" },
-    { label: "Cookie Policy", href: "/cookies" },
+    { label: "Privacy Policy",    href: "/privacy" },
+    { label: "Terms of Service",  href: "/terms" },
+    { label: "Risk Disclaimer",   href: "/disclaimer" },
+    { label: "Cookie Policy",     href: "/cookies" },
   ],
 };
 
@@ -39,7 +41,9 @@ export default function Footer() {
               >
                 <Zap className="w-4 h-4 text-black" strokeWidth={2.5} />
               </div>
-              <span className="text-base font-bold text-white">AI Trading <span style={{ color: "#00ff88" }}>Copilot</span></span>
+              <span className="text-base font-bold text-white">
+                Coin<span style={{ color: "#00ff88" }}>astra</span>
+              </span>
             </Link>
             <p className="text-sm text-white/35 leading-relaxed mb-6 max-w-xs">
               AI-powered crypto intelligence for traders who want to think clearer,
@@ -72,12 +76,12 @@ export default function Footer() {
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link
+                    <a
                       href={link.href}
                       className="text-sm text-white/40 hover:text-white/70 transition-colors"
                     >
                       {link.label}
-                    </Link>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -87,7 +91,7 @@ export default function Footer() {
 
         <div className="border-t border-white/5 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/20">
-            © 2026 AI Trading Copilot. All rights reserved.
+            © 2026 Coinastra. All rights reserved.
           </p>
           <p className="text-xs text-white/15 text-center sm:text-right max-w-xs">
             Not financial advice. Crypto trading involves significant risk. Past patterns

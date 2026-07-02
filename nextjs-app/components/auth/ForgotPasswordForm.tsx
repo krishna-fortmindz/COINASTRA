@@ -8,13 +8,30 @@ export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setSent(true);
-    setLoading(false);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.message ?? "Failed to send reset code. Please try again.");
+        setLoading(false);
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (sent) {
@@ -25,11 +42,18 @@ export default function ForgotPasswordForm() {
           <CheckCircle className="w-6 h-6 text-[#00ff88]" />
         </div>
         <p className="text-sm text-white/60 leading-relaxed">
-          If an account exists for <span className="text-white font-medium">{email}</span>,
-          we've sent a password reset link. Check your inbox.
+          A 6-digit reset code has been sent to{" "}
+          <span className="text-white font-medium">{email}</span>.
+          Check your inbox and enter it below.
         </p>
-        <Link href="/auth/login" className="btn-secondary w-full text-sm py-3 flex items-center justify-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back to sign in
+        <Link
+          href={`/auth/verify-otp?email=${encodeURIComponent(email)}&type=password_reset`}
+          className="btn-primary w-full text-sm py-3 flex items-center justify-center gap-2"
+        >
+          Enter OTP <ArrowRight className="w-4 h-4" />
+        </Link>
+        <Link href="/auth/login" className="flex items-center justify-center gap-2 text-sm text-white/30 hover:text-white/50 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to sign in
         </Link>
       </div>
     );
@@ -37,6 +61,12 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="px-3 py-2.5 rounded-xl text-xs text-[#ff3366] border border-[#ff3366]/20 bg-[#ff3366]/5">
+          {error}
+        </div>
+      )}
+
       <div>
         <label className="block text-xs font-medium text-white/50 mb-1.5 uppercase tracking-wider">Email address</label>
         <div className="relative">
@@ -50,7 +80,7 @@ export default function ForgotPasswordForm() {
       </div>
 
       <button type="submit" disabled={loading} className="btn-primary w-full py-3.5 text-sm disabled:opacity-60">
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Send reset link <ArrowRight className="w-4 h-4" /></>}
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Send reset code <ArrowRight className="w-4 h-4" /></>}
       </button>
 
       <Link href="/auth/login" className="flex items-center justify-center gap-2 text-sm text-white/30 hover:text-white/60 transition-colors">

@@ -2,16 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AiSummaryNotifier extends ChangeNotifier {
-  static const fullText =
+  static const _defaultText =
       'BTC is showing strong bullish momentum. RSI at 67 — not yet overbought. '
       r'Key resistance at $98.4K. Funding rates remain neutral. ETF inflows are positive '
       'for the 3rd consecutive day. Consider scaling positions on pullbacks to the '
       r'$95K support zone. Watch for a possible liquidity sweep below $96K before continuation.';
 
+  String _fullText = _defaultText;
   int _charCount = 0;
   bool _isTyping = true;
   bool _disposed = false;
 
+  String get fullText => _fullText;
   int get charCount => _charCount;
   bool get isTyping => _isTyping;
 
@@ -19,17 +21,29 @@ class AiSummaryNotifier extends ChangeNotifier {
     _startTyping();
   }
 
+  /// Called when live AI summary arrives from the API.
+  /// Resets the typewriter animation with the new text.
+  void setText(String text) {
+    if (text.isEmpty || text == _fullText) return;
+    _fullText = text;
+    _charCount = 0;
+    _isTyping = true;
+    notifyListeners();
+    _startTyping();
+  }
+
   void _startTyping() {
     Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 20));
+      await Future.delayed(const Duration(milliseconds: 18));
       if (_disposed) return false;
-      if (_charCount < fullText.length) {
+      if (_charCount < _fullText.length) {
         _charCount++;
-      } else {
-        _isTyping = false;
+        notifyListeners();
+        return true;
       }
+      _isTyping = false;
       notifyListeners();
-      return _charCount < fullText.length;
+      return false;
     });
   }
 

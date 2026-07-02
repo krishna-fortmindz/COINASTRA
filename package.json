@@ -6,7 +6,9 @@
     "dev": "concurrently --names \"next,flutter,proxy\" --prefix-colors \"cyan,magenta,yellow\" \"npm:dev:next\" \"npm:dev:flutter\" \"npm:dev:proxy\"",
     "dev:next": "cd nextjs-app && npm run dev",
     "dev:flutter": "cd flutter-app && flutter run --profile -d web-server --web-port 5001 --web-hostname localhost",
+    "dev:flutter-debug": "cd flutter-app && flutter run --debug -d web-server --web-port 5001 --web-hostname localhost",
     "dev:proxy": "node dev-proxy.js",
+    "kill": "lsof -ti :3000 | xargs kill -9 2>/dev/null; lsof -ti :5001 | xargs kill -9 2>/dev/null; lsof -ti :8080 | xargs kill -9 2>/dev/null; echo 'ports cleared'",
     "install:all": "cd nextjs-app && npm install"
   },
   "dependencies": {

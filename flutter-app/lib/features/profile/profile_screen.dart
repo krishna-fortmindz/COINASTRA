@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/auth_provider.dart';
 
 // Outer build is static — ProfileCard, SubscriptionCard, ExchangeConnections never rebuild
 class ProfileScreen extends ConsumerWidget {
@@ -14,88 +15,92 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left column — fully static, no reactive state
-            const Expanded(
-              child: Column(
-                children: [
-                  _ProfileCard(),
-                  SizedBox(height: 16),
-                  _SubscriptionCard(),
-                  SizedBox(height: 16),
-                  _ExchangeConnections(),
-                ],
+        child: LayoutBuilder(builder: (_, c) {
+          const leftColumn = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ProfileCard(),
+              SizedBox(height: 16),
+              _SubscriptionCard(),
+              SizedBox(height: 16),
+              _ExchangeConnections(),
+            ],
+          );
+
+          final rightColumn = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Consumer(
+                builder: (_, ref, __) {
+                  final darkMode = ref.watch(profileProvider.select((n) => n.darkMode));
+                  final notifications = ref.watch(profileProvider.select((n) => n.notifications));
+                  return _SettingsCard(
+                    darkMode: darkMode,
+                    notifications: notifications,
+                    onDarkChanged: (v) => ref.read(profileProvider).setDarkMode(v),
+                    onNotifChanged: (v) => ref.read(profileProvider).setNotifications(v),
+                  );
+                },
               ),
-            ),
-            const SizedBox(width: 16),
-            // Right column — each card has its own Consumer, rebuilds independently
-            Expanded(
-              child: Column(
-                children: [
-                  // Rebuilds only when darkMode or notifications changes
-                  Consumer(
-                    builder: (_, ref, __) {
-                      final darkMode = ref.watch(
-                        profileProvider.select((n) => n.darkMode),
-                      );
-                      final notifications = ref.watch(
-                        profileProvider.select((n) => n.notifications),
-                      );
-                      return _SettingsCard(
-                        darkMode: darkMode,
-                        notifications: notifications,
-                        onDarkChanged: (v) =>
-                            ref.read(profileProvider).setDarkMode(v),
-                        onNotifChanged: (v) =>
-                            ref.read(profileProvider).setNotifications(v),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Rebuilds only when twoFA changes
-                  Consumer(
-                    builder: (_, ref, __) {
-                      final twoFA = ref.watch(
-                        profileProvider.select((n) => n.twoFA),
-                      );
-                      return _SecurityCard(
-                        twoFA: twoFA,
-                        onTwoFAChanged: (v) =>
-                            ref.read(profileProvider).setTwoFA(v),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Rebuilds only when aiPersonality changes
-                  Consumer(
-                    builder: (_, ref, __) {
-                      final personality = ref.watch(
-                        profileProvider.select((n) => n.aiPersonality),
-                      );
-                      return _AiPersonalizationCard(
-                        personality: personality,
-                        onChanged: (v) =>
-                            ref.read(profileProvider).setAiPersonality(v),
-                      );
-                    },
-                  ),
-                ],
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (_, ref, __) {
+                  final twoFA = ref.watch(profileProvider.select((n) => n.twoFA));
+                  return _SecurityCard(
+                    twoFA: twoFA,
+                    onTwoFAChanged: (v) => ref.read(profileProvider).setTwoFA(v),
+                  );
+                },
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (_, ref, __) {
+                  final personality = ref.watch(profileProvider.select((n) => n.aiPersonality));
+                  return _AiPersonalizationCard(
+                    personality: personality,
+                    onChanged: (v) => ref.read(profileProvider).setAiPersonality(v),
+                  );
+                },
+              ),
+            ],
+          );
+
+          if (c.maxWidth < 700) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                leftColumn,
+                const SizedBox(height: 16),
+                rightColumn,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: leftColumn),
+              const SizedBox(width: 16),
+              Expanded(child: rightColumn),
+            ],
+          );
+        }),
       ),
     );
   }
 }
 
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends ConsumerWidget {
   const _ProfileCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authNotifierProvider);
+    final user = authState.user;
+    final name = user?.name ?? 'Guest';
+    final email = user?.email ?? '';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'G';
+
     return GlassCard(
       child: Row(
         children: [
@@ -105,7 +110,7 @@ class _ProfileCard extends StatelessWidget {
               gradient: AppColors.gradientGreen,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(child: Text('JD', style: TextStyle(
+            child: Center(child: Text(initial, style: const TextStyle(
               fontSize: 20, fontWeight: FontWeight.w800, color: Colors.black,
             ))),
           ),
@@ -114,31 +119,14 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('John Doe', style: TextStyle(
+                Text(name, style: const TextStyle(
                   fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white,
                 )),
-                const Text('john@example.com', style: TextStyle(
+                if (email.isNotEmpty) Text(email, style: const TextStyle(
                   fontSize: 12, color: AppColors.textMuted,
                 )),
-                const SizedBox(height: 4),
-                NeonBadge(
-                  label: 'Pro Plan',
-                  color: AppColors.brandGreen,
-                  icon: Icons.verified_rounded,
-                ),
               ],
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.bgTertiary,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: const Text('Edit Profile', style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textMuted,
-            )),
           ),
         ],
       ),
@@ -153,85 +141,33 @@ class _SubscriptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       borderColor: AppColors.brandGreen.withAlpha(30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Text('Pro Plan', style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
-              )),
-              const Spacer(),
-              NeonBadge(label: 'Active', color: AppColors.brandGreen),
-            ],
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.brandGreen.withAlpha(15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.workspace_premium_rounded,
+                color: AppColors.brandGreen, size: 20),
           ),
-          const SizedBox(height: 8),
-          const Text('\$49/month · Renews May 7, 2026', style: TextStyle(
-            fontSize: 12, color: AppColors.textMuted,
-          )),
-          const SizedBox(height: 16),
-          const Divider(color: AppColors.borderSubtle, height: 1),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _UsageBar('AI Queries', 847, 1000, AppColors.brandGreen),
-              const SizedBox(width: 16),
-              _UsageBar('Alerts', 12, 50, AppColors.brandBlue),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Upgrade to Institutional', style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-              )),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Subscription', style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
+                )),
+                SizedBox(height: 2),
+                Text('Plan details coming soon', style: TextStyle(
+                  fontSize: 11, color: AppColors.textMuted,
+                )),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _UsageBar extends StatelessWidget {
-  final String label;
-  final int used, total;
-  final Color color;
-  const _UsageBar(this.label, this.used, this.total, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-              const Spacer(),
-              Text('$used/$total', style: TextStyle(
-                fontSize: 10, color: color, fontFamily: 'JetBrainsMono',
-              )),
-            ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: used / total,
-              backgroundColor: AppColors.borderSubtle,
-              valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 4,
-            ),
-          ),
+          NeonBadge(label: 'Active', color: AppColors.brandGreen),
         ],
       ),
     );

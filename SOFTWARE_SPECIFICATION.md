@@ -1,9 +1,9 @@
-# CoinPilot — Software Specification Document
+# Coinastra — Software Specification Document
 
-**Version:** 1.0.0
-**Date:** 2026-05-19
-**Product:** AI Trading Copilot (aitradingcopilot.com)
-**Status:** Frontend 100% complete | Backend 0% complete
+**Version:** 1.1.0
+**Date:** 2026-05-25
+**Product:** Coinastra (coisastra-main.vercel.app)
+**Status:** Frontend + Backend integration complete | Live on Vercel
 
 ---
 
@@ -33,7 +33,7 @@
 
 ### 1.1 Product Description
 
-CoinPilot is an AI-powered crypto trading intelligence platform. It gives traders real-time market analysis, RAG-powered historical pattern matching (Market Memory), sentiment aggregation across social and on-chain sources, risk management tools, a psychology-aware trade journal, and a conversational AI assistant — all inside a unified dashboard.
+Coinastra is an AI-powered crypto trading intelligence platform. It gives traders real-time market analysis, RAG-powered historical pattern matching (Market Memory), sentiment aggregation across social and on-chain sources, risk management tools, a psychology-aware trade journal, and a conversational AI assistant — all inside a unified dashboard.
 
 ### 1.2 Core Value Propositions
 
@@ -41,12 +41,13 @@ CoinPilot is an AI-powered crypto trading intelligence platform. It gives trader
 |---------|-------------|
 | **Market Memory Engine** | RAG pipeline that matches current market structure to historical patterns and shows what happened next |
 | **AI Market Analysis** | Claude/GPT-4 powered per-coin analysis with trend, support/resistance, confidence scores |
+| **On-Chain Analytics** | Exchange flows, netflow charts, token unlocks calendar, and per-coin on-chain indicators |
 | **Sentiment Intelligence** | Aggregated bullish/bearish score from News, Twitter, Reddit, and whale on-chain data |
-| **New Listings Intel** | AI-scored new coin listings with momentum, potential, and risk scores |
+| **Trade Now** | Real-time signal, open interest, long/short ratio, and liquidation heatmap for active trading |
 | **Risk Management** | Interactive position sizing calculator with AI warnings |
 | **Trade Journal** | Psychology-aware trade logging with AI pattern detection (FOMO, revenge trading) |
 | **AI Chat Assistant** | Conversational interface with portfolio-aware context injection |
-| **Smart Alerts** | Configurable alerts for price targets, whale moves, funding spikes, sentiment shifts |
+| **Predictions Leaderboard** | Community vs. AI prediction accuracy tracking |
 
 ### 1.3 Target Users
 
@@ -70,54 +71,52 @@ CoinPilot is an AI-powered crypto trading intelligence platform. It gives trader
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                           │
+│                    coisastra-main.vercel.app                   │
 ├──────────────────────────┬────────────────────────────────────┤
-│   Next.js 14 (Port 3000) │   Flutter Web (Port 5001)          │
-│   Landing + Blog + Auth  │   Authenticated Dashboard          │
+│   Next.js (/)            │   Flutter Web (/app/)              │
+│   Landing + Auth         │   Authenticated Dashboard          │
 └──────────────────────────┴────────────────────────────────────┘
                            │
-                  Nginx / Dev Proxy
+              HTTPS + Socket.IO
                            │
           ┌────────────────┴────────────────┐
-          │                                 │
-          ▼                                 ▼
-   REST API Server                  WebSocket Server
-   (Node.js / FastAPI)              (Socket.io / WS)
-          │                                 │
-          │                        Redis Pub/Sub
-          │
-   ┌──────┴──────────────────────────────────────────┐
-   │                                                  │
-   ▼                  ▼                  ▼            ▼
-PostgreSQL          Redis           pgvector     TimescaleDB
-(users, trades,   (sessions,       (RAG vector   (optional,
- alerts, journal)  cache, queues)   embeddings)   OHLCV store)
+          │   crypto-backend-4557.onrender.com │
+          │   REST API (/api/v1/*)            │
+          │   WebSocket (Socket.IO)           │
+          │   WebSocket Cache (Binance data)  │
+          └────────────────┬────────────────┘
+                           │
+   ┌──────┬───────────────┴──────────────────────┐
+   │      │                                       │
+   ▼      ▼                       ▼               ▼
+PostgreSQL  Redis             pgvector        External APIs
+(users,   (sessions,         (RAG vector     (CoinGecko,
+ trades,   cache, queues)     embeddings)     Alternative.me,
+ journal)                                     Binance WS cache)
 ```
 
 ### 2.2 URL Routing Architecture
 
 **Development:**
 ```
-http://localhost:8080  (dev-proxy.js)
-├── /dashboard, /analysis, /charts, /memory, /sentiment,
-│   /listings, /risk, /journal, /chat, /alerts, /profile
-│                          └──► Flutter :5001
-└── /, /auth/*, /blog, /pricing
-                           └──► Next.js :3000
+Next.js:   npm run dev → http://localhost:3000
+Flutter:   flutter run -d web-server --web-port 5001 --dart-define=ENV=dev
+Backend:   http://localhost:8080 (Flutter uses --dart-define=ENV=dev)
+
+Next.js rewrites (dev, next.config.mjs):
+  /app, /app/* → proxy to Flutter on :5001
 ```
 
-**Production:**
+**Production (Vercel — single URL):**
 ```
-https://aitradingcopilot.com  (Nginx reverse proxy)
-├── /app/*, /dashboard/*, /analysis/*, /charts/*,
-│   /chat/*, /memory/*, /sentiment/*, /listings/*,
-│   /risk/*, /journal/*, /alerts/*, /profile/*
-│                          └──► Flutter Web (Vercel)
-└── /, /auth/*, /blog, /pricing, /sitemap.xml, /robots.txt
-                           └──► Next.js (Vercel)
+https://coisastra-main.vercel.app
+├── /app             → Flutter Web (embedded in Next.js public/app/)
+├── /app/            → Flutter Web index.html
+├── /app/:path*      → Flutter Web index.html (client-side routing)
+└── /*               → Next.js (landing, auth, blog, pricing)
 
-https://api.aitradingcopilot.com  (Backend API — to be built)
-wss://api.aitradingcopilot.com    (WebSocket — to be built)
+Backend API + WebSocket:
+  https://crypto-backend-4557.onrender.com  (Render.com)
 ```
 
 ### 2.3 Technology Stack Summary
@@ -126,16 +125,16 @@ wss://api.aitradingcopilot.com    (WebSocket — to be built)
 |-------|------------|
 | Marketing / Auth Frontend | Next.js 14.2.5, React 18.3.1, TypeScript, Tailwind CSS |
 | Dashboard Frontend | Flutter 3.3+, Dart, Riverpod, GoRouter |
-| Backend API | Node.js + Fastify **or** Python + FastAPI (TBD) |
+| Backend API | Node.js (live on Render) |
 | Primary Database | PostgreSQL 16 + pgvector extension |
-| Cache / Sessions | Redis 7 (Upstash managed recommended) |
-| Vector Store | pgvector (co-located) **or** Pinecone (managed) |
+| Cache / Sessions | Redis 7 (Upstash managed) |
+| Vector Store | pgvector (co-located) |
 | Background Jobs | BullMQ (Redis-backed) |
 | LLM | Anthropic Claude Sonnet 4.6 (primary), GPT-4o (fallback) |
 | Embeddings | OpenAI text-embedding-3-large |
-| Hosting | Vercel (frontend), Railway / Render / Fly.io (backend) |
+| Hosting | Vercel (both apps, single URL) + Render (backend) |
 | CI/CD | GitHub Actions |
-| Reverse Proxy | Nginx |
+| Real-Time Data | Socket.IO + Binance WebSocket Cache |
 
 ---
 
@@ -195,12 +194,15 @@ nextjs-app/
 │       ├── BlogPreview.tsx         Featured + grid blog post preview
 │       ├── CTASection.tsx          Final conversion section
 │       └── Footer.tsx              Links, legal, copyright
-├── next.config.mjs
+├── lib/
+│   └── auth.ts                     NextAuth config — JWT, Google OAuth, token storage
+├── next.config.mjs                 Rewrites (prod: /app/* → Flutter; dev: proxy :5001)
 ├── tailwind.config.ts
 ├── tsconfig.json
 ├── postcss.config.mjs
 ├── package.json
-└── .env.example
+├── .env.development                Dev environment variables
+└── .env.production                 Production environment variables
 ```
 
 ### 3.3 Pages & Routes
@@ -214,31 +216,36 @@ nextjs-app/
 | `/auth/verify-otp` | OTP verification | No | No |
 | `/auth/forgot-password` | Password reset | No | No |
 | `/404` | Custom error page | No | No |
-| `/dashboard/*` | Rewritten → Flutter | Yes | No |
-| `/app/*` | Rewritten → Flutter | Yes | No |
-| `/analysis/*` | Rewritten → Flutter | Yes | No |
-| `/charts/*` | Rewritten → Flutter | Yes | No |
-| `/chat/*` | Rewritten → Flutter | Yes | No |
+| `/app` | Flutter Dashboard (root) | Yes | No |
+| `/app/*` | Flutter Dashboard (all routes) | Yes | No |
 
 ### 3.4 Next.js Configuration (next.config.mjs)
 
-```
-output:                "standalone"
+```js
+// No "output: standalone" — Vercel handles Next.js natively
 optimizePackageImports: ["lucide-react", "framer-motion"]
 remotePatterns:        assets.coingecko.com, cryptologos.cc, coin-images.coingecko.com
-rewrites:              5 rules routing /dashboard, /app, /analysis, /charts, /chat → Flutter
-headers:               X-Frame-Options: DENY
-                       X-Content-Type-Options: nosniff
-                       Referrer-Policy: strict-origin-when-cross-origin
+
+rewrites (production):
+  /app         → /app/index.html   (Flutter entry)
+  /app/        → /app/index.html
+  /app/:path*  → /app/index.html   (Flutter client-side routing)
+
+rewrites (development):
+  /app/:path*  → http://localhost:5001/:path*  (proxy to Flutter dev server)
+
+headers: X-Frame-Options: DENY
+         X-Content-Type-Options: nosniff
+         Referrer-Policy: strict-origin-when-cross-origin
 ```
 
 ### 3.5 Landing Page Components — Detail
 
 #### Navbar
 - Fixed/sticky header with scroll-based styling change
-- Logo with gradient icon + "CoinPilot" text
+- Logo with gradient icon + "Coin**astra**" text
 - Desktop nav links: Features, Market Memory, Pricing, Blog
-- Desktop CTAs: "Log in" (ghost), "Dashboard" (outline), "Start Free" (green filled)
+- Desktop CTAs: "Log in" (ghost), "Dashboard" → `/app/` (outline), "Start Free" (green filled)
 - Mobile: hamburger → full-screen mobile menu
 - Breakpoint: `md` (768px)
 
@@ -246,11 +253,12 @@ headers:               X-Frame-Options: DENY
 - Animated ticker tape: 8 crypto symbols scrolling horizontally (30s loop)
 - Main headline with gradient text effect
 - Subheading value proposition
-- 3 CTAs: "Start Free Trial", "Open Dashboard", "Watch Demo"
+- 3 CTAs: "Start Free Trial", "Open Dashboard" → `/app/`, "Watch Demo"
 - Live AI Market Summary card with typewriter animation
 - Two-card grid:
   - Left (2/3 width): AI analysis card (sentiment score, confidence bar, trend direction)
   - Right (1/3 width): BTC price card + Fear & Greed gauge
+- Live BTC price fetched from backend; null-safe (`?? 0` guards on all numeric fields)
 
 #### Features (9 Cards)
 | # | Feature | Color | Icon |
@@ -322,6 +330,17 @@ freezed_annotation ^2.4.4   Immutable models
 json_annotation   ^4.9.0    JSON serialization
 ```
 
+**Build for production:**
+```bash
+flutter build web --release --web-renderer canvaskit --base-href /app/
+# Output: build/web/ → copy to nextjs-app/public/app/
+```
+
+**Dev run:**
+```bash
+flutter run -d web-server --web-port 5001 --dart-define=ENV=dev
+```
+
 ### 4.2 Directory Structure
 
 ```
@@ -330,47 +349,102 @@ flutter-app/
 │   ├── main.dart                           App entry point
 │   ├── app/
 │   │   ├── app.dart                        Root MaterialApp + ThemeData
-│   │   └── router.dart                     GoRouter — 11 routes in ShellRoute
+│   │   └── router.dart                     GoRouter — 16 routes in ShellRoute
 │   ├── core/
+│   │   ├── end_points.dart                 All API endpoints (env-aware baseUrl)
+│   │   ├── remote/
+│   │   │   ├── api_client.dart             Dio HTTP client (JWT interceptor)
+│   │   │   ├── web_socket_baseclass.dart   Socket.IO client (DashboardSocket singleton)
+│   │   │   ├── chat_socket.dart            Chat WebSocket
+│   │   │   └── data/
+│   │   │       ├── dashboard/              DashboardRepo + DashboardRepoImpl + models
+│   │   │       ├── analysis/               AnalysisRepo + models
+│   │   │       ├── new_listings/           NewListingsRepo + models
+│   │   │       ├── orderbook/              OrderbookRepo + models
+│   │   │       ├── predictions/            PredictionsRepo + models
+│   │   │       ├── sentiment/              Sentiment models
+│   │   │       ├── trade_now/              TradeNowRepo + models
+│   │   │       └── journal/               Journal models
 │   │   ├── theme/
 │   │   │   ├── app_colors.dart             All color constants (AppColors class)
 │   │   │   └── app_theme.dart              Full ThemeData, TextThemes, InputDecoration
 │   │   └── widgets/
 │   │       ├── app_shell.dart              Responsive layout (sidebar + topbar + content)
 │   │       ├── sidebar.dart                Desktop navigation sidebar (220px)
-│   │       ├── top_bar.dart                Top header (60px) with live indicator + ticker
+│   │       ├── top_bar.dart                Top header (60px) with live indicator + coin search
+│   │       ├── coin_selector.dart          Reusable coin search/select widget
 │   │       └── glass_card.dart             Reusable glass-morphism card widget
-│   └── features/
-│       ├── dashboard/
-│       │   ├── dashboard_screen.dart
-│       │   └── widgets/
-│       │       ├── market_overview_card.dart
-│       │       ├── ai_summary_card.dart
-│       │       ├── fear_greed_widget.dart
-│       │       ├── funding_rate_panel.dart
-│       │       ├── portfolio_overview.dart
-│       │       ├── trending_coins.dart
-│       │       └── whale_alerts.dart
-│       ├── ai_analysis/
-│       │   └── ai_analysis_screen.dart
-│       ├── charts/
-│       │   └── charts_screen.dart
-│       ├── market_memory/
-│       │   └── market_memory_screen.dart
-│       ├── news_sentiment/
-│       │   └── news_sentiment_screen.dart
-│       ├── new_listings/
-│       │   └── new_listings_screen.dart
-│       ├── risk_management/
-│       │   └── risk_management_screen.dart
-│       ├── trade_journal/
-│       │   └── trade_journal_screen.dart
-│       ├── ai_chat/
-│       │   └── ai_chat_screen.dart
-│       ├── alerts/
-│       │   └── alerts_screen.dart
-│       └── profile/
-│           └── profile_screen.dart
+│   ├── features/
+│   │   ├── dashboard/
+│   │   │   ├── dashboard_screen.dart
+│   │   │   └── widgets/
+│   │   │       ├── market_overview_card.dart   4-coin live price cards (WebSocket)
+│   │   │       ├── ai_summary_card.dart        LLM-generated market insight
+│   │   │       ├── fear_greed_widget.dart       Fear & Greed gauge
+│   │   │       ├── funding_rate_panel.dart      5-coin funding rates + "View All" (100 coins)
+│   │   │       ├── portfolio_overview.dart      User holdings summary
+│   │   │       ├── trending_coins.dart          CoinGecko trending list
+│   │   │       └── whale_alerts.dart            Live whale alerts (WebSocket)
+│   │   ├── ai_analysis/
+│   │   │   └── ai_analysis_screen.dart         Per-coin AI analysis with coin selector
+│   │   ├── charts/
+│   │   │   └── charts_screen.dart              Candlestick chart with indicators
+│   │   ├── market_memory/
+│   │   │   └── market_memory_screen.dart       RAG pattern matching (any coin search)
+│   │   ├── news_sentiment/
+│   │   │   └── news_sentiment_screen.dart      News + social sentiment tabs
+│   │   ├── new_listings/
+│   │   │   └── new_listings_screen.dart        New coin listings with AI scores
+│   │   ├── onchain/
+│   │   │   └── onchain_screen.dart             On-chain analytics (4 tabs: indicators,
+│   │   │                                        exchange flows, netflow chart, token unlocks)
+│   │   ├── token_unlocks/
+│   │   │   └── token_unlocks_screen.dart       Token unlock schedule + calendar
+│   │   ├── orderbook/
+│   │   │   └── orderbook_screen.dart           Live order book depth
+│   │   ├── trade_now/
+│   │   │   └── trade_now_screen.dart           Trade signal + open interest + long/short
+│   │   ├── portfolio/
+│   │   │   └── portfolio_screen.dart           User portfolio (auth-required)
+│   │   ├── predictions/
+│   │   │   └── predictions_leaderboard_screen.dart  Community vs. AI predictions
+│   │   ├── risk_management/
+│   │   │   └── risk_management_screen.dart
+│   │   ├── trade_journal/
+│   │   │   └── trade_journal_screen.dart       (auth-required)
+│   │   ├── ai_chat/
+│   │   │   └── ai_chat_screen.dart
+│   │   ├── alerts/
+│   │   │   └── alerts_screen.dart
+│   │   └── profile/
+│   │       └── profile_screen.dart             (auth-required)
+│   ├── providers/
+│   │   ├── auth_provider.dart              JWT auth state (coinastra_* localStorage keys)
+│   │   ├── dashboard_provider.dart         Market data + Socket.IO stream providers
+│   │   ├── ai_analysis_provider.dart       Per-coin AI analysis
+│   │   ├── ai_chat_provider.dart           Chat message state
+│   │   ├── ai_summary_provider.dart        AI market summary
+│   │   ├── alerts_provider.dart            Alert CRUD
+│   │   ├── analysis_provider.dart          Trade analysis (signal, OI, L/S, liq)
+│   │   ├── charts_provider.dart            OHLCV candles + indicators
+│   │   ├── exchange_flows_provider.dart    Exchange flows netflow + breakdown
+│   │   ├── journal_provider.dart           Trade journal CRUD
+│   │   ├── market_memory_provider.dart     RAG pattern search (any coin)
+│   │   ├── new_listings_provider.dart      New coin listings
+│   │   ├── onchain_indicators_provider.dart  Per-coin on-chain metrics (level-colored)
+│   │   ├── orderbook_provider.dart         Live order book
+│   │   ├── portfolio_provider.dart         Portfolio holdings
+│   │   ├── predictions_provider.dart       Prediction leaderboard + accuracy
+│   │   ├── profile_provider.dart           User profile data
+│   │   ├── risk_provider.dart              Risk calculator
+│   │   ├── sentiment_provider.dart         News + social sentiment
+│   │   ├── token_unlocks_provider.dart     Token unlock schedule
+│   │   └── trade_now_provider.dart         Real-time trade signals
+│   └── services/
+│       ├── pref_keys.dart                  SharedPreferences key constants (coinastra_*)
+│       └── shared_pref_services.dart       Preference read/write helpers
+├── web/
+│   └── index.html                          <base href="$FLUTTER_BASE_HREF"> (Vercel /app/)
 ├── assets/
 │   ├── fonts/       Inter + JetBrains Mono (8 weights total)
 │   ├── images/
@@ -381,26 +455,33 @@ flutter-app/
 
 ### 4.3 Navigation Architecture
 
-**GoRouter — ShellRoute wraps all 11 routes:**
+**GoRouter — ShellRoute wraps all 16 routes:**
 
 ```dart
 ShellRoute(
   builder: (ctx, state, child) => AppShell(child: child),
   routes: [
-    /dashboard   → DashboardScreen
-    /analysis    → AiAnalysisScreen
-    /charts      → ChartsScreen
-    /memory      → MarketMemoryScreen
-    /sentiment   → NewsSentimentScreen
-    /listings    → NewListingsScreen
-    /risk        → RiskManagementScreen
-    /journal     → TradeJournalScreen
-    /chat        → AiChatScreen
-    /alerts      → AlertsScreen
-    /profile     → ProfileScreen
+    /dashboard        → DashboardScreen
+    /analysis         → AiAnalysisScreen
+    /charts           → ChartsScreen
+    /memory           → MarketMemoryScreen
+    /sentiment        → NewsSentimentScreen
+    /listings         → NewListingsScreen
+    /orderbook        → OrderbookScreen
+    /onchain          → OnchainScreen
+    /token-unlocks    → TokenUnlocksScreen
+    /trade-now        → TradeNowScreen (accepts ?coin= query param)
+    /portfolio        → PortfolioScreen  [auth-required]
+    /risk             → RiskManagementScreen
+    /journal          → TradeJournalScreen  [auth-required]
+    /chat             → AiChatScreen
+    /profile          → ProfileScreen  [auth-required]
+    /predictions      → PredictionsLeaderboardScreen
   ]
 )
 ```
+
+**Auth guard:** `_AuthGuardedPage` wraps auth-required screens. If not logged in, shows a sign-in prompt card with a link to `/auth/login` (Next.js) via `html.window.location.assign`. The user can dismiss and continue browsing public screens.
 
 **AppShell Responsive Breakpoints:**
 
@@ -423,19 +504,42 @@ AI INTELLIGENCE
 
 MARKET
   ├── Charts
+  ├── Order Book
   ├── Sentiment
   └── New Listings  [badge: HOT]
 
+ON-CHAIN
+  ├── On-Chain Analytics
+  └── Token Unlocks
+
 TRADING
+  ├── Trade Now
   ├── Risk Manager
   ├── Trade Journal
-  └── Alerts        [badge: 3 (unread)]
+  ├── Portfolio
+  ├── Predictions
+  └── Alerts        [badge: unread count]
 
 ACCOUNT
   └── Profile
 ```
 
-### 4.5 Screen-by-Screen Specification
+### 4.5 Environment / Config
+
+**Base URL switching (single variable):**
+```dart
+// flutter-app/lib/core/end_points.dart
+static const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+static const String baseUrl = _env == 'dev'
+    ? 'http://localhost:8080'
+    : 'https://crypto-backend-4557.onrender.com';
+static const String socketUrl = baseUrl;  // Socket.IO always follows baseUrl
+```
+
+**Run dev:** `flutter run -d web-server --web-port 5001 --dart-define=ENV=dev`
+**Build prod:** `flutter build web --release --web-renderer canvaskit --base-href /app/`
+
+### 4.6 Screen-by-Screen Specification
 
 ---
 
@@ -447,12 +551,17 @@ ACCOUNT
 | Widget | Data Source | Update Frequency |
 |--------|------------|-----------------|
 | MarketOverviewCard (×4) | BTC, ETH, SOL, BNB prices + 24h change | WebSocket (real-time) |
-| AiSummaryCard | LLM-generated insight | 15 min |
-| FearGreedWidget | Alternative.me | 1 h |
-| FundingRatePanel | Binance perpetuals | 30 s |
+| AiSummaryCard | LLM-generated insight (`/dashboard/trade-analysis`) | 15 min |
+| FearGreedWidget | Alternative.me via backend | 1 h |
+| FundingRatePanel | 5 coins (BTC/ETH/SOL/BNB/XRP) + "View All" 100 coins | 30 s |
 | PortfolioOverview | User's holdings + live prices | 60 s |
 | TrendingCoins | CoinGecko trending endpoint | 5 min |
-| WhaleAlerts | Whale Alert API | Real-time push |
+| WhaleAlerts | Socket.IO `whaleStream` | Real-time push |
+
+**Funding Rate "View All":**
+- Opens a bottom sheet with all 100 coins (`allFundingRatesProvider`)
+- Live search filters locally across all 100 symbols
+- Sorted by absolute funding rate descending
 
 ---
 
@@ -461,14 +570,14 @@ ACCOUNT
 **Purpose:** Deep AI analysis for a selected coin.
 
 **UI Sections:**
-- Coin selector dropdown (default: BTC, options: ETH, SOL, BNB, custom input)
+- Coin selector (default: BTC, searchable)
 - MarketSummaryCard — LLM narrative: trend, momentum, key events, confidence %
-- SupportResistanceCard — S1, S2, R1, R2, Pivot (calculated from OHLCV)
+- SupportResistanceCard — S1, S2, R1, R2, Pivot
 - SentimentCard — bullish % breakdown by source
 - VolatilityCard — ATR (14), Bollinger Band width
 - KeyLevelsCard — formatted table of price levels
-- AiChatPanel — sidebar allowing follow-up questions in context of selected coin
 
+**Endpoint:** `GET /api/v1/dashboard/trade-analysis?symbol=BTC`
 **Caching:** 15 min per (coinId, analysis)
 
 ---
@@ -481,11 +590,12 @@ ACCOUNT
 - Timeframe selector: `1m | 5m | 15m | 1H | 4H | 1D | 1W`
 - Coin selector
 - Indicator toggles: RSI, MACD, EMA (9, 21, 50), Volume, Bollinger Bands
-- Drawing tools toolbar (placeholder for Phase 2)
-- Candlestick chart rendered via `fl_chart` or custom Canvas painter
+- Candlestick chart rendered via `fl_chart`
 - Indicator panel below chart showing numeric values
 
-**Data:** CoinGecko OHLCV endpoint, cached 5 min per (coin, interval)
+**Endpoints:**
+- `GET /api/v1/dashboard/klines?symbol=BTCUSDT&interval=1h&limit=100`
+- `GET /api/v1/analysis/indicators?symbol=BTCUSDT&type=rsi&interval=1h`
 
 ---
 
@@ -494,20 +604,16 @@ ACCOUNT
 **Purpose:** RAG-powered historical pattern matching.
 
 **UI:**
+- **Coin selector:** Search any coin (not limited to BTC/ETH/SOL pills)
 - **Current State Card:** Shows live market parameters
-  - BTC price + structure
-  - RSI (14d)
-  - Funding rate (BTC perpetual)
-  - Sentiment score
-  - BTC dominance
 - **Pattern Match Cards (×4):** Ordered by similarity score
-  - Historical date range
-  - Similarity % (progress bar + numeric)
-  - Outcome: +X% or −X% over N days after
-  - Key contributing factors (badge chips): RSI overbought, whale accumulation, etc.
-  - Short narrative description
+  - Historical date range, similarity %, outcome %, key factors
 
-**Backend:** Vector similarity search via pgvector / Pinecone (cosine distance)
+**Endpoints:**
+- `GET /api/v1/memory/patterns?symbol=BTC&lookback=365`
+- `GET /api/v1/memory/similar-events?symbol=BTC&limit=5`
+- `GET /api/v1/memory/market-cycles?symbol=BTC`
+- `GET /api/v1/memory/macro-context`
 
 ---
 
@@ -515,20 +621,12 @@ ACCOUNT
 
 **Purpose:** Aggregated sentiment from all sources.
 
-**Tabs:**
-1. **News** — Crypto news with AI sentiment badges (Bullish / Bearish / Neutral)
-2. **Twitter** — Tweet volume + aggregate sentiment score per coin
-3. **Reddit** — Subreddit analysis (r/bitcoin, r/ethereum, r/cryptocurrency)
-4. **Whale Activity** — On-chain large transactions (>$5M)
+**Tabs:** News | Twitter | Reddit | Whale Activity
 
-**Top Section (all tabs):**
-- Overall Sentiment Meter: 0–100 gauge
-  - 0–20: Extreme Fear
-  - 20–40: Fear
-  - 40–60: Neutral
-  - 60–80: Greed
-  - 80–100: Extreme Greed
-- Source contribution breakdown (Twitter %, Reddit %, News %, On-chain %)
+**Endpoints:**
+- `GET /api/sentiment/news`
+- `GET /api/sentiment/social`
+- `GET /api/sentiment/coins/:coinId`
 
 ---
 
@@ -539,20 +637,101 @@ ACCOUNT
 **Filter Tabs:** All | AI | Meme | DeFi | Gaming | RWA
 
 **Per Listing Card:**
-- Symbol + name + emoji icon
-- Current price + 24h change (green/red)
-- Exchange name + listing timestamp
-- **Scores:**
-  - Momentum (0–100) — price action velocity
-  - Potential (0–100) — narrative + social strength
-  - Risk (Low / Medium / High)
-- Volume surge multiplier (e.g., "48x baseline")
-- Tags: 🐳 Whale Accumulation, 🧠 Smart Money
-- AI reason (1–2 sentence explanation)
+- Symbol + name, price + 24h change
+- Momentum (0–100), Potential (0–100), Risk (Low/Medium/High)
+- Volume surge multiplier, whale/smart-money tags, AI reason
+
+**Endpoint:** `GET /api/v1/dashboard/new-listings?page=1&limit=20`
 
 ---
 
-#### Screen 7: Risk Management (`/risk`)
+#### Screen 7: On-Chain Analytics (`/onchain`)
+
+**Purpose:** On-chain data organized in 4 tabs for a selected coin.
+
+**Coin selector:** Defaults to BTC, switchable — top exchanges and indicators update per coin.
+
+**Tabs:**
+1. **Indicators** — Per-coin on-chain metrics (NVT, SOPR, MVRV, exchange netflow, active addresses, etc.)
+   - Each indicator card shows: name, value, signal text, description
+   - Color-coded by `level`: bullish (green), neutral (amber), bearish (red)
+   - Endpoint: `GET /api/v1/onchain/indicators?symbol=BTC`
+
+2. **Exchange Flows** — Top exchanges breakdown (inflows vs. outflows per exchange)
+   - Data comes from `exchangeFlowsNetflowProvider(symbol)` → `flow.exchangeBreakdown`
+   - Updates when coin selector changes
+   - Endpoint: `GET /api/v1/exchange-flows/netflow?symbol=BTC&days=30`
+
+3. **Netflow Chart** — 30-day exchange netflow area chart for selected coin
+   - Positive = net inflow (selling pressure), negative = net outflow (accumulation)
+
+4. **Token Unlocks** — Upcoming unlocks for selected coin
+   - Endpoint: `GET /api/v1/token-unlocks?page=1&limit=20`
+
+---
+
+#### Screen 8: Token Unlocks (`/token-unlocks`)
+
+**Purpose:** Upcoming token unlock schedule with calendar view.
+
+**Sections:**
+- Summary stats: Total unlocking in 30d, largest upcoming unlock
+- List view: project name, unlock date, amount, % of supply, category (team/investor/ecosystem)
+- Upcoming unlocks filter (next 7d / 30d / 90d)
+
+**Endpoints:**
+- `GET /api/v1/token-unlocks?page=1&limit=20`
+- `GET /api/v1/token-unlocks/upcoming?days=30`
+
+---
+
+#### Screen 9: Order Book (`/orderbook`)
+
+**Purpose:** Live order book depth visualization.
+
+**Features:**
+- Symbol selector
+- Bid/Ask depth table (top 50 levels each side)
+- Cumulative depth bars
+- Real-time updates
+
+**Endpoint:** `GET /api/v1/dashboard/order-book?symbol=BTCUSDT&limit=50`
+
+---
+
+#### Screen 10: Trade Now (`/trade-now`)
+
+**Purpose:** Real-time signals and market microstructure for active trading.
+
+**Accepts:** `?coin=BTCUSDT` query parameter (linkable from other screens)
+
+**Tabs:**
+1. **Signal** — Buy/Sell/Hold signal with confidence %, key reasons
+2. **Open Interest** — OI trend chart, long/short ratio
+3. **Liquidations** — Liquidation heatmap
+4. **History** — Recent signal history for coin
+
+**Endpoints:**
+- `GET /api/v1/analysis/signal?symbol=BTCUSDT`
+- `GET /api/v1/analysis/open-interest?symbol=BTCUSDT`
+- `GET /api/v1/analysis/long-short?symbol=BTCUSDT`
+- `GET /api/v1/analysis/liquidations?symbol=BTCUSDT`
+- `GET /api/v1/analysis/history?symbol=BTCUSDT`
+
+---
+
+#### Screen 11: Portfolio (`/portfolio`) — Auth Required
+
+**Purpose:** User portfolio holdings and performance.
+
+**Endpoints:**
+- `GET /api/v1/portfolio`
+- `GET /api/v1/portfolio/holdings`
+- `GET /api/v1/portfolio/performance`
+
+---
+
+#### Screen 12: Risk Management (`/risk`)
 
 **Purpose:** Interactive position sizing and risk calculator.
 
@@ -575,246 +754,202 @@ ACCOUNT
 | Risk Level | Conservative ≤2%, Moderate ≤5%, High >5% |
 
 **AI Warnings:** Displayed when leverage ≥ 8x
-**Leverage Color Coding:** ≤3x green, 4–7x amber, ≥8x red
 
 ---
 
-#### Screen 8: Trade Journal (`/journal`)
+#### Screen 13: Trade Journal (`/journal`) — Auth Required
 
 **Purpose:** Log trades with psychology tagging and AI pattern detection.
 
-**Tabs:**
-1. **Trades** — Trade log list + FAB to add new trade
-   - Fields: Pair, Direction (Long/Short), Entry Price, Exit Price, Size, Date, Notes
-   - Tags: Psychology (FOMO / Patient / Revenge / Disciplined), Strategy, Outcome (Win/Loss/Breakeven)
-   - Computed: P&L ($), P&L (%)
-
-2. **Analytics** — Stats dashboard
-   - Win Rate (%)
-   - Profit Factor (gross profit / gross loss)
-   - Average R:R ratio
-   - Total P&L ($)
-   - Trade count, streak
-
-3. **Psychology** — AI-generated insights
-   - Revenge trading pattern detection
-   - FOMO frequency tracking
-   - Emotional pattern over time (chart)
-   - AI recommendations
+**Tabs:** Trades | Analytics | Psychology
 
 ---
 
-#### Screen 9: AI Chat (`/chat`)
+#### Screen 14: AI Chat (`/chat`)
 
 **Purpose:** Conversational AI assistant with trading context.
 
 **Features:**
-- Full-height chat interface
-- User + AI message bubbles
-- Typing indicator (animated dots)
-- Streaming response via SSE or WebSocket
-- 6 suggested quick-questions:
-  - "What's the current BTC trend?"
-  - "Should I hold my ETH position?"
-  - "What are the top movers today?"
-  - "Explain the current market structure"
-  - "Any whale activity I should know?"
-  - "What's your risk assessment for SOL?"
-- Context injected into every message: current prices, Fear/Greed, user portfolio
+- Full-height chat interface with streaming responses
+- 6 suggested quick-questions (BTC trend, whale activity, etc.)
+- Context injected: current prices, Fear/Greed, user portfolio
+- Chat history persisted per user
 
-**Persistence:** All messages stored in `chat_messages` DB table
+**Endpoint:** `POST /api/v1/ai/chat` (SSE streaming)
 
 ---
 
-#### Screen 10: Alerts (`/alerts`)
+#### Screen 15: Predictions Leaderboard (`/predictions`)
 
-**Purpose:** Manage and view real-time trading alerts.
+**Purpose:** Community vs. AI prediction accuracy tracking.
 
-**Alert Types (Toggle on/off):**
-| Alert Type | Trigger Condition |
-|------------|------------------|
-| Funding Rate Spikes | Funding rate > 0.05% |
-| Whale Alerts | On-chain transaction > $5M |
-| Volatility Burst | Price change > 50% within 1 hour |
-| Sentiment Change | Sentiment score shifts > 10 points |
-| New Listings | New coin listed within 4 hours |
-| Price Targets | User-configured price threshold reached |
+**Tabs:** Leaderboard | My Predictions | User vs. AI
 
-**Recent Alerts List:** Timestamp, coin, alert type, description, severity badge
+**Endpoints:**
+- `GET /api/v1/predictions/leaderboard`
+- `GET /api/v1/predictions/user/mine`
+- `GET /api/v1/predictions/user/vs-ai`
+- `GET /api/v1/predictions/:coinId/accuracy`
+- `GET /api/v1/predictions/:coinId/history`
 
 ---
 
-#### Screen 11: Profile (`/profile`)
+#### Screen 16: Profile (`/profile`) — Auth Required
 
 **Purpose:** User account and preferences management.
 
 **Sections:**
-- **ProfileCard:** Avatar (initials + color), name, email, subscription tier badge
-- **SubscriptionCard:** Current plan + usage stats + upgrade CTA
-- **Exchange Connections:** Linked Binance / Bybit API keys (display only, edit/delete)
-- **Preferences:** Dark mode toggle, notification toggles (price alerts, whale, news)
-- **Security:** 2FA toggle, active sessions, change password
-- **AI Personality:** Selector — Direct | Friendly | Professional (affects LLM system prompt tone)
+- ProfileCard: Avatar (initials + color), name, email, subscription tier badge
+- SubscriptionCard: Current plan + usage stats + upgrade CTA
+- Exchange Connections: Linked Binance / Bybit API keys
+- Preferences: Dark mode toggle, notification toggles
+- Security: 2FA toggle, active sessions, change password
+- AI Personality: Direct | Friendly | Professional
 
 ---
 
 ## 5. BACKEND API SPECIFICATION
 
-> None of these endpoints exist yet. This section defines the full contract to be implemented.
-
-**Base URL:** `https://api.aitradingcopilot.com`
-**Authentication:** JWT Bearer token (header: `Authorization: Bearer <token>`)
+**Base URL:** `https://crypto-backend-4557.onrender.com`
+**API Prefix:** `/api/v1`
+**Authentication:** JWT Bearer token (`Authorization: Bearer <token>`)
 **Format:** JSON request/response
-**Rate Limiting:** Per-user + per-IP (see §10.3)
+**Real-Time:** Socket.IO on the same host
+
+**WebSocket Cache:** Backend maintains a persistent Binance WebSocket connection and caches all market data internally. Flutter connects to the backend Socket.IO server — never directly to Binance. This avoids browser CORS and Binance API key exposure.
 
 ---
 
-### 5.1 Auth Endpoints
+### 5.1 Implemented Dashboard Endpoints
+
+| Method | Route | Cache TTL | Status |
+|--------|-------|-----------|--------|
+| GET | `/api/v1/dashboard/summary` | 60s | ✅ Live |
+| GET | `/api/v1/dashboard/markets` | 60s | ✅ Live |
+| GET | `/api/v1/dashboard/trending` | 5m | ✅ Live |
+| GET | `/api/v1/dashboard/fear-greed` | 1h | ✅ Live |
+| GET | `/api/v1/dashboard/funding-rates` | 30s | ✅ Live |
+| GET | `/api/v1/dashboard/klines` | 5m | ✅ Live |
+| GET | `/api/v1/dashboard/order-book` | 10s | ✅ Live |
+| GET | `/api/v1/dashboard/ticker-24hr` | 30s | ✅ Live |
+| GET | `/api/v1/dashboard/new-listings` | 15m | ✅ Live |
+| GET | `/api/v1/dashboard/trade-analysis` | 15m | ✅ Live |
+
+### 5.2 Implemented Analysis Endpoints
+
+| Method | Route | Status |
+|--------|-------|--------|
+| GET | `/api/v1/analysis/signal` | ✅ Live |
+| GET | `/api/v1/analysis/sentiment` | ✅ Live |
+| GET | `/api/v1/analysis/open-interest` | ✅ Live |
+| GET | `/api/v1/analysis/long-short` | ✅ Live |
+| GET | `/api/v1/analysis/liquidations` | ✅ Live |
+| GET | `/api/v1/analysis/history` | ✅ Live |
+| GET | `/api/v1/analysis/levels` | ✅ Live |
+| GET | `/api/v1/analysis/indicators` | ✅ Live |
+
+### 5.3 Implemented On-Chain Endpoints
+
+| Method | Route | Query Params | Status |
+|--------|-------|-------------|--------|
+| GET | `/api/v1/onchain/indicators` | `symbol=BTC` | ✅ Live |
+| GET | `/api/v1/exchange-flows/netflow` | `symbol=BTC&days=30` | ✅ Live |
+| GET | `/api/v1/exchange-flows/top-exchanges` | `limit=10` | ✅ Live |
+| GET | `/api/v1/token-unlocks` | `page=1&limit=20` | ✅ Live |
+| GET | `/api/v1/token-unlocks/upcoming` | `days=30` | ✅ Live |
+
+**On-chain indicator response shape:**
+```json
+{
+  "success": true,
+  "data": {
+    "symbol": "BTC",
+    "indicators": [
+      {
+        "name": "NVT Ratio",
+        "value": 42.5,
+        "signal": "Neutral — healthy transaction volume",
+        "level": "neutral",
+        "description": "Network Value to Transactions ratio measures network efficiency"
+      }
+    ]
+  }
+}
+```
+`level` values: `"bullish"` | `"neutral"` | `"bearish"` — Flutter maps these to green/amber/red.
+
+### 5.4 Implemented Market Memory Endpoints
+
+| Method | Route | Status |
+|--------|-------|--------|
+| GET | `/api/v1/memory/patterns` | ✅ Live |
+| GET | `/api/v1/memory/similar-events` | ✅ Live |
+| GET | `/api/v1/memory/market-cycles` | ✅ Live |
+| GET | `/api/v1/memory/macro-context` | ✅ Live |
+
+### 5.5 Implemented Predictions Endpoints
+
+| Method | Route | Status |
+|--------|-------|--------|
+| GET | `/api/v1/predictions/leaderboard` | ✅ Live |
+| GET | `/api/v1/predictions/user` | ✅ Live |
+| GET | `/api/v1/predictions/user/mine` | ✅ Live |
+| GET | `/api/v1/predictions/user/vs-ai` | ✅ Live |
+| GET | `/api/v1/predictions/:coinId/accuracy` | ✅ Live |
+| GET | `/api/v1/predictions/:coinId/history` | ✅ Live |
+| GET | `/api/v1/predictions/:coinId/post-mortems` | ✅ Live |
+
+### 5.6 Auth Endpoints
 
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | POST | `/api/auth/register` | None | Register with email + password |
-| POST | `/api/auth/login` | None | Login → returns `accessToken` + `refreshToken` (httpOnly cookie) |
+| POST | `/api/auth/login` | None | Login → returns `accessToken` + `refreshToken` |
 | POST | `/api/auth/logout` | JWT | Invalidate refresh token |
 | POST | `/api/auth/refresh` | Cookie | Exchange refresh token for new access token |
 | POST | `/api/auth/forgot-password` | None | Send 6-digit OTP to email |
-| POST | `/api/auth/verify-otp` | None | Verify OTP code (purpose: forgot_password or email_verify) |
+| POST | `/api/auth/verify-otp` | None | Verify OTP code |
 | POST | `/api/auth/reset-password` | None | Set new password after OTP verified |
-| GET  | `/api/auth/google` | None | Redirect to Google OAuth consent screen |
+| GET  | `/api/auth/google` | None | Redirect to Google OAuth |
 | GET  | `/api/auth/google/callback` | None | Handle Google OAuth callback |
 | GET  | `/api/auth/me` | JWT | Return current user object |
 
-**Request/Response examples:**
+### 5.7 User & Portfolio Endpoints (Planned)
 
-```
-POST /api/auth/register
-Body: { "name": "...", "email": "...", "password": "..." }
-Response 201: { "user": {...}, "accessToken": "..." }
+| Method | Route | Auth | Status |
+|--------|-------|------|--------|
+| GET | `/api/v1/portfolio` | JWT | Planned |
+| POST | `/api/v1/portfolio/holdings` | JWT | Planned |
+| PATCH | `/api/v1/portfolio/holdings/:id` | JWT | Planned |
+| DELETE | `/api/v1/portfolio/holdings/:id` | JWT | Planned |
+| GET | `/api/v1/portfolio/performance` | JWT | Planned |
 
-POST /api/auth/login
-Body: { "email": "...", "password": "..." }
-Response 200: { "user": {...}, "accessToken": "..." }
-Set-Cookie: refreshToken=...; HttpOnly; Secure; SameSite=Strict
-```
+### 5.8 Trade Journal Endpoints (Planned)
 
----
+| Method | Route | Auth | Status |
+|--------|-------|------|--------|
+| GET | `/api/journal` | JWT | Planned |
+| POST | `/api/journal` | JWT | Planned |
+| PATCH | `/api/journal/:id` | JWT | Planned |
+| DELETE | `/api/journal/:id` | JWT | Planned |
+| GET | `/api/journal/stats` | JWT | Planned |
 
-### 5.2 User & Profile Endpoints
+### 5.9 Alerts Endpoints (Planned)
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET  | `/api/user/profile` | JWT | Full profile (avatar, name, plan, created_at) |
-| PATCH | `/api/user/profile` | JWT | Update name, avatar_url, timezone, currency |
-| GET  | `/api/user/preferences` | JWT | Notification + display preferences |
-| PATCH | `/api/user/preferences` | JWT | Update preferences |
-| DELETE | `/api/user/account` | JWT | GDPR-compliant account deletion |
+| Method | Route | Auth | Status |
+|--------|-------|------|--------|
+| GET | `/api/v1/alerts` | JWT | Planned |
+| POST | `/api/v1/alerts` | JWT | Planned |
+| PATCH | `/api/v1/alerts/:id` | JWT | Planned |
+| DELETE | `/api/v1/alerts/:id` | JWT | Planned |
 
----
+### 5.10 Risk Management Endpoints (Planned)
 
-### 5.3 Market Data Endpoints
-
-> All data proxied from CoinGecko / Binance. Responses cached in Redis.
-
-| Method | Route | Cache TTL | Description |
-|--------|-------|-----------|-------------|
-| GET | `/api/market/coins` | 60s | Paginated coin list (price, 24h %, mcap, volume). Query: `page`, `limit`, `order` |
-| GET | `/api/market/coins/:coinId` | 30s | Single coin detail (all metadata + current price) |
-| GET | `/api/market/coins/:coinId/ohlcv` | 5m | OHLCV candles. Query: `interval` (1m/5m/1h/1d), `from`, `to` |
-| GET | `/api/market/coins/:coinId/orderbook` | 10s | Current orderbook depth |
-| GET | `/api/market/fear-greed` | 1h | Fear & Greed Index (Alternative.me) |
-| GET | `/api/market/global` | 60s | Global market cap, dominance, volume |
-| GET | `/api/market/trending` | 5m | Trending coins (24h) |
-| GET | `/api/market/funding-rates` | 30s | Perpetual funding rates (Binance) |
-| GET | `/api/market/new-listings` | 15m | New coin listings with AI momentum scores |
-| GET | `/api/market/whale-alerts` | Real-time | Recent large on-chain transactions |
-| GET | `/api/dashboard/summary` | 60s | Combined: top prices + F&G + trending + whale alerts + AI summary |
-
----
-
-### 5.4 Portfolio Endpoints
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/portfolio` | JWT | Portfolio summary: holdings, total value, P&L, allocation |
-| POST | `/api/portfolio/holdings` | JWT | Add holding: `{ coinId, coinSymbol, amount, avgBuyPriceUsd }` |
-| PATCH | `/api/portfolio/holdings/:id` | JWT | Update amount or avg buy price |
-| DELETE | `/api/portfolio/holdings/:id` | JWT | Remove holding |
-| GET | `/api/portfolio/performance` | JWT | Historical portfolio value over time (chart data) |
-
----
-
-### 5.5 Trade Journal Endpoints
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/journal` | JWT | Paginated trade list. Query: `page`, `limit`, `outcome`, `dateFrom`, `dateTo` |
-| POST | `/api/journal` | JWT | Log new trade (see schema below) |
-| GET | `/api/journal/:id` | JWT | Single trade detail |
-| PATCH | `/api/journal/:id` | JWT | Update trade entry |
-| DELETE | `/api/journal/:id` | JWT | Delete trade entry |
-| GET | `/api/journal/stats` | JWT | Aggregated stats: win rate, profit factor, avg R:R, psychology patterns |
-
-**POST /api/journal body:**
-```json
-{
-  "pair": "BTC/USDT",
-  "direction": "long",
-  "entryPrice": 95000,
-  "exitPrice": 97500,
-  "size": 0.1,
-  "entryAt": "2026-05-01T10:00:00Z",
-  "exitAt": "2026-05-03T14:30:00Z",
-  "notes": "Clean breakout play",
-  "psychology": "patient",
-  "strategy": "breakout",
-  "outcome": "win"
-}
-```
-
----
-
-### 5.6 Risk Management Endpoints
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | `/api/risk/position-size` | JWT | Calculate: `{ accountSize, riskPercent, entryPrice, stopLossPrice, leverage }` |
-| POST | `/api/risk/rr-calculator` | JWT | Risk:Reward: `{ entryPrice, stopLoss, takeProfit }` |
-| GET | `/api/risk/max-drawdown/:coinId` | JWT | Historical max drawdown for a coin |
-
----
-
-### 5.7 Alerts Endpoints
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/alerts` | JWT | All user alerts (active + inactive) |
-| POST | `/api/alerts` | JWT | Create alert: `{ coinId, condition, targetValue, alertType }` |
-| PATCH | `/api/alerts/:id` | JWT | Update alert (toggle active, change target) |
-| DELETE | `/api/alerts/:id` | JWT | Delete alert |
-| GET | `/api/alerts/history` | JWT | Paginated history of fired alerts |
-
----
-
-### 5.8 News & Sentiment Endpoints
-
-| Method | Route | Cache TTL | Description |
-|--------|-------|-----------|-------------|
-| GET | `/api/sentiment/news` | 10m | Latest crypto news with AI sentiment score (bullish/bearish/neutral) |
-| GET | `/api/sentiment/social` | 15m | Twitter + Reddit aggregate sentiment for top 10 coins |
-| GET | `/api/sentiment/coins/:coinId` | 15m | All sentiment signals for a specific coin |
-| GET | `/api/sentiment/on-chain` | 10m | On-chain indicators: NVT, SOPR, exchange netflow |
-
----
-
-### 5.9 Subscription / Billing Endpoints
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/billing/plans` | None | List all plans and pricing |
-| POST | `/api/billing/checkout` | JWT | Create Stripe Checkout session |
-| POST | `/api/billing/portal` | JWT | Customer portal URL for managing subscription |
-| POST | `/api/billing/webhook` | Stripe sig | Stripe webhook (subscription events) |
-| GET | `/api/billing/subscription` | JWT | Current subscription status |
+| Method | Route | Auth | Status |
+|--------|-------|------|--------|
+| POST | `/api/risk/position-size` | JWT | Planned |
+| POST | `/api/risk/rr-calculator` | JWT | Planned |
+| GET | `/api/risk/max-drawdown` | JWT | Planned |
 
 ---
 
@@ -822,12 +957,12 @@ Set-Cookie: refreshToken=...; HttpOnly; Secure; SameSite=Strict
 
 ### 6.1 AI Chat — Streaming Completions
 
-**Endpoint:** `POST /api/ai/chat`
+**Endpoint:** `POST /api/v1/ai/chat`
 **Protocol:** Server-Sent Events (SSE) for streaming
 
-**System Prompt Template (injected per request):**
+**System Prompt Template:**
 ```
-You are CoinPilot, an expert crypto trading AI assistant.
+You are Coinastra, an expert crypto trading AI assistant.
 
 CURRENT MARKET DATA (updated 60s ago):
 - BTC: ${{btcPrice}} ({{btcChange24h}}% 24h)
@@ -846,21 +981,18 @@ Respond concisely. Use markdown. Do not give financial advice.
 - Primary: `claude-sonnet-4-6` (Anthropic)
 - Fallback: `gpt-4o` (OpenAI)
 
-**Storage:** Every turn stored in `chat_messages` (PostgreSQL)
-**Rate Limit:** Free tier — 3/day, Pro — unlimited, Institutional — unlimited + priority
-
 ---
 
 ### 6.2 AI Market Analysis
 
-**Endpoint:** `GET /api/ai/analysis/:coinId`
+**Endpoint:** `GET /api/v1/dashboard/trade-analysis?symbol=BTC`
 **Cache:** 15 min (Redis)
 
 **Pipeline:**
 ```
-1. Fetch coin OHLCV (30d), current price, volume, market cap (CoinGecko)
+1. Fetch coin OHLCV (30d), current price, volume, market cap
 2. Compute: RSI(14), MACD, Bollinger Bands, EMA(9,21,50), support/resistance
-3. Fetch sentiment score for coin (LunarCrush + CryptoPanic)
+3. Fetch sentiment score for coin
 4. Build structured prompt with all data
 5. Call Claude Sonnet → structured JSON response:
    {
@@ -873,109 +1005,41 @@ Respond concisely. Use markdown. Do not give financial advice.
      "outlook": "short|medium|long"
    }
 6. Cache result in Redis for 15 min
-7. Return to client
 ```
 
 ---
 
 ### 6.3 Market Memory Engine — Full RAG Pipeline
 
-This is the platform's flagship differentiator.
-
 #### Ingestion Phase (Nightly Background Job)
-
 ```
 For each coin in top-100 list:
   For each window size in [30, 60, 90] days:
     For each historical window (sliding, 7-day step):
       1. Fetch OHLCV data for the window
-      2. Compute feature vector:
-         {
-           price_change_pct: float,
-           volume_change_pct: float,
-           rsi_start: float,
-           rsi_end: float,
-           macd_signal: "bullish_cross"|"bearish_cross"|"neutral",
-           bollinger_width_pct: float,
-           funding_rate_avg: float,
-           fear_greed_avg: float,
-           btc_dominance_avg: float,
-           sentiment_score_avg: float
-         }
-      3. Convert feature vector to natural language description string
+      2. Compute feature vector (price_change_pct, rsi, macd, funding_rate_avg,
+         fear_greed_avg, btc_dominance_avg, sentiment_score_avg, ...)
+      3. Convert to natural language description string
       4. Call OpenAI text-embedding-3-large → 1536-dim vector
-      5. Compute outcome_data:
-         {
-           price_30d_after: float,
-           pct_change_30d: float,
-           price_60d_after: float,
-           pct_change_60d: float
-         }
-      6. Upsert into pgvector market_patterns table
+      5. Upsert into pgvector market_patterns table with outcome_data
 ```
 
 #### Query Phase (On User Request)
-
 ```
-1. Compute current market feature vector (same schema as ingestion)
+1. Compute current market feature vector for requested coin
 2. Convert to natural language description
 3. Embed via OpenAI text-embedding-3-large
-4. Run pgvector cosine similarity search → top 5 matches
-5. For each match, retrieve: date range, features, outcome_data
-6. Build prompt with matches + outcomes → Claude generates narrative
-7. Return: [ { date, similarity%, outcome, keyFactors, explanation } × 4 ]
-```
-
-**Vector Index:**
-```sql
-CREATE INDEX ON market_patterns
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
+4. pgvector cosine similarity search → top 5 matches
+5. Claude generates narrative for each match
+6. Return: [ { date, similarity%, outcome, keyFactors, explanation } × 4 ]
 ```
 
 ---
 
 ### 6.4 Sentiment AI Scoring
 
-**Endpoint:** `POST /api/ai/sentiment/score` (internal, called by background job)
-
-**Pipeline:**
-```
-For each news article / tweet batch:
-  1. Call Claude Haiku (cheap) with:
-     "Classify the sentiment of this crypto news as: bullish, bearish, or neutral.
-      Confidence 0-100. Coin mentioned (if any). Return JSON."
-  2. Store result in Redis (key: sentiment:{hash(text)}, TTL: 24h)
-  3. Aggregate per coin: compute weighted average sentiment score
-```
-
----
-
-### 6.5 New Listings AI Scoring
-
-**Endpoint:** `GET /api/ai/listings/score/:coinId`
-**Trigger:** Nightly job + on-demand
-
-**Input signals to LLM:**
-- Social volume (LunarCrush)
-- Whitepaper summary (scraped/fetched)
-- Tokenomics (circulating supply, total supply, vesting)
-- Whale accumulation (Whale Alert)
-- Exchange tier (Tier 1: Binance/Coinbase vs. Tier 2/3)
-- Narrative fit (AI/Meme/DeFi/Gaming/RWA)
-
-**Output:**
-```json
-{
-  "momentumScore": 78,
-  "potentialScore": 65,
-  "riskLevel": "Medium",
-  "whaleAccumulation": true,
-  "smartMoney": false,
-  "volumeSurge": "48x",
-  "aiReason": "Strong AI narrative, Tier 1 listing, whale accumulation detected..."
-}
-```
+**Pipeline:** Claude Haiku batch-classifies news/tweets as bullish/bearish/neutral.
+Aggregated per coin, cached in Redis (key: `sentiment:{hash(text)}`, TTL: 24h).
 
 ---
 
@@ -992,7 +1056,7 @@ CREATE TABLE users (
   google_id       TEXT UNIQUE,
   name            TEXT,
   avatar_url      TEXT,
-  plan            TEXT NOT NULL DEFAULT 'free',  -- free | pro | elite
+  plan            TEXT NOT NULL DEFAULT 'free',
   email_verified  BOOLEAN DEFAULT false,
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
@@ -1069,8 +1133,8 @@ CREATE TABLE alerts (
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   coin_id       TEXT NOT NULL,
   coin_symbol   TEXT NOT NULL,
-  alert_type    TEXT NOT NULL,  -- price_target | funding_spike | whale | volatility | sentiment | new_listing
-  condition     TEXT,           -- above | below | percent_change
+  alert_type    TEXT NOT NULL,
+  condition     TEXT,
   target_value  NUMERIC(20, 8),
   is_active     BOOLEAN DEFAULT true,
   fired_at      TIMESTAMPTZ,
@@ -1104,7 +1168,7 @@ CREATE TABLE user_preferences (
   email_alerts   BOOLEAN DEFAULT true,
   push_alerts    BOOLEAN DEFAULT true,
   default_coins  TEXT[] DEFAULT ARRAY['bitcoin', 'ethereum'],
-  ai_personality TEXT DEFAULT 'friendly',  -- direct | friendly | professional
+  ai_personality TEXT DEFAULT 'friendly',
   updated_at     TIMESTAMPTZ DEFAULT now()
 );
 ```
@@ -1117,7 +1181,7 @@ CREATE TABLE subscriptions (
   stripe_customer_id      TEXT UNIQUE,
   stripe_subscription_id  TEXT UNIQUE,
   plan                    TEXT NOT NULL CHECK (plan IN ('pro', 'elite')),
-  status                  TEXT NOT NULL,  -- active | canceled | past_due | trialing
+  status                  TEXT NOT NULL,
   current_period_end      TIMESTAMPTZ,
   created_at              TIMESTAMPTZ DEFAULT now(),
   updated_at              TIMESTAMPTZ DEFAULT now()
@@ -1137,7 +1201,7 @@ CREATE TABLE market_patterns (
   coin_id         TEXT NOT NULL,
   window_start    DATE NOT NULL,
   window_end      DATE NOT NULL,
-  interval_days   INTEGER NOT NULL,  -- 30 | 60 | 90
+  interval_days   INTEGER NOT NULL,
   embedding       vector(1536) NOT NULL,
   features        JSONB NOT NULL,
   outcome_data    JSONB,
@@ -1151,34 +1215,6 @@ CREATE INDEX ON market_patterns
 CREATE INDEX ON market_patterns (coin_id, window_start);
 ```
 
-**features JSONB schema:**
-```json
-{
-  "price_change_pct": 34.5,
-  "volume_change_pct": 120.3,
-  "rsi_start": 45.2,
-  "rsi_end": 67.8,
-  "macd_signal": "bullish_cross",
-  "bollinger_width_pct": 8.2,
-  "funding_rate_avg": 0.023,
-  "fear_greed_avg": 72.0,
-  "btc_dominance_avg": 48.5,
-  "sentiment_score_avg": 68.0
-}
-```
-
-**outcome_data JSONB schema:**
-```json
-{
-  "price_30d_after": 101420.0,
-  "pct_change_30d": 4.1,
-  "price_60d_after": 104900.0,
-  "pct_change_60d": 7.8,
-  "price_90d_after": 98200.0,
-  "pct_change_90d": -1.2
-}
-```
-
 ---
 
 ### 7.3 Redis — Key Namespaces
@@ -1190,68 +1226,45 @@ CREATE INDEX ON market_patterns (coin_id, window_start);
 | `market:coin:{coinId}` | 30s | Single coin data |
 | `market:ohlcv:{coinId}:{interval}` | 5m | OHLCV candles |
 | `market:feargreed` | 1h | Fear & Greed index |
-| `market:global` | 60s | Global market stats |
-| `market:trending` | 5m | Trending coins |
 | `market:funding` | 30s | Funding rates |
 | `ai:analysis:{coinId}` | 15m | LLM analysis per coin |
-| `ai:listing:score:{coinId}` | 4h | AI listing score |
+| `onchain:{symbol}` | 5m | On-chain indicators per coin |
+| `exchange-flows:{symbol}` | 5m | Exchange flow netflow per coin |
+| `token-unlocks` | 1h | Token unlock schedule |
+| `memory:{symbol}` | 30m | RAG pattern results per coin |
 | `sentiment:news` | 10m | News with scores |
-| `sentiment:social:{coinId}` | 15m | Social sentiment per coin |
 | `sentiment:{hash(text)}` | 24h | Individual article/tweet score |
 | `rl:{userId}:{endpoint}` | sliding | Per-user rate limit counter |
-| `rl:ip:{ip}` | sliding | Per-IP rate limit counter |
-
-**Pub/Sub Channels:**
-```
-prices:{coinId}          Real-time price tick broadcast
-alert:fired:{userId}     Trigger notification delivery
-whale:alert              New whale transaction (broadcast all)
-sentiment:update         Sentiment score changed for a coin
-```
 
 ---
 
 ## 8. REAL-TIME INFRASTRUCTURE
 
-### 8.1 WebSocket Server
+### 8.1 WebSocket Architecture
 
-**Library:** Socket.io (Node.js) with `@socket.io/redis-adapter` for horizontal scaling
+**Library:** Socket.IO (server), `socket_io_client` (Flutter)
+**Connection:** `https://crypto-backend-4557.onrender.com` (same host as REST API)
+**Implementation:** `DashboardSocket` singleton (`web_socket_baseclass.dart`)
 
-**Connection:** `wss://api.aitradingcopilot.com`
-**Auth:** JWT passed as query param `?token=<accessToken>` on connect
+**Key design:**
+- Backend maintains persistent connection to Binance WebSocket streams
+- Flutter connects to backend Socket.IO (never directly to Binance)
+- Prevents CORS issues and exposes no API keys to browser
 
-### 8.2 Event Contract
+### 8.2 Socket.IO Event Contract
 
-| Event | Direction | Payload |
-|-------|-----------|---------|
-| `subscribe:prices` | Client → Server | `{ coinIds: ["bitcoin", "ethereum"] }` |
-| `unsubscribe:prices` | Client → Server | `{ coinIds: [...] }` |
-| `price:tick` | Server → Client | `{ coinId, price, change24h, timestamp }` |
-| `subscribe:alerts` | Client → Server | `{}` (auto on auth) |
-| `alert:fired` | Server → Client | `{ alertId, coinId, type, message, firedAt }` |
-| `whale:alert` | Server → Client | `{ from, to, amount, coin, valueUsd, txHash }` |
-| `sentiment:update` | Server → Client | `{ coinId, score, change, source }` |
-| `ai:chat:token` | Server → Client | `{ token, done: bool }` (streaming) |
+| Event (server→client) | Payload | Flutter Provider |
+|----------------------|---------|-----------------|
+| `market:miniTicker` | `List<TickerUpdate>` | `tickerProvider` → `Map<symbol, TickerUpdate>` |
+| `whale:alert` | `List<LiveWhaleAlert>` | `liveWhaleProvider` |
+| `funding:update` | `List<LiveFundingRate>` | `liveFundingProvider` |
+| `connect` / `disconnect` | — | `socketConnectionProvider` |
 
-### 8.3 Price Feed Architecture
+### 8.3 Binance WebSocket Cache
 
-```
-Binance WebSocket Streams (server-side)
-        │
-        ▼
-  Backend subscribes to Binance WS streams
-  for top 50 coins (aggTrade + kline streams)
-        │
-        ▼
-   Parse + normalize price data
-        │
-        ▼
-  Publish to Redis: PUBLISH prices:{coinId} {...}
-        │
-        ▼
-  Socket.io Redis adapter broadcasts to
-  all subscribed client WebSocket connections
-```
+The backend subscribes to Binance WebSocket streams server-side and serves cached data to Flutter clients. Env var: `BINANCE_USE_WEBSOCKET_CACHE=true`.
+
+This replaces direct Binance REST API calls that caused CORS errors in browser-based Flutter Web.
 
 ---
 
@@ -1261,23 +1274,11 @@ Binance WebSocket Streams (server-side)
 
 | Provider | Endpoint Used | Rate Limit | Env Var |
 |----------|--------------|------------|---------|
-| **CoinGecko Pro** | `/coins/markets`, `/coins/{id}`, `/coins/{id}/ohlc`, `/search/trending` | 500 req/min | `COINGECKO_API_KEY` |
-| **Binance** | `/api/v3/ticker/24hr`, `/fapi/v1/fundingRate`, WS streams | 1200 req/min | `BINANCE_API_KEY` + `BINANCE_SECRET` |
+| **CoinGecko Pro** | `/coins/markets`, `/coins/{id}`, `/search/trending` | 500 req/min | `COINGECKO_API_KEY` |
+| **Binance** | WebSocket streams (server-side cache) | N/A | `BINANCE_API_KEY` |
 | **Alternative.me** | `https://api.alternative.me/fng/` | Free, cache 1h | None |
-| **Whale Alert** | `/v1/transactions` | 10 req/min | `WHALE_ALERT_API_KEY` |
-| **Glassnode** | `/v1/metrics/*` (NVT, SOPR, exchange flows) | 3K req/month | `GLASSNODE_API_KEY` |
-| **CoinMarketCal** | `/events` (new listings calendar) | 50 req/min | `COINMARKETCAL_API_KEY` |
 
-### 9.2 Sentiment & Social
-
-| Provider | Data | Env Var |
-|----------|------|---------|
-| **LunarCrush** | Social volume, engagement, sentiment score per coin | `LUNARCRUSH_API_KEY` |
-| **CryptoPanic** | Curated crypto news with community votes | `CRYPTOPANIC_API_KEY` |
-| **Twitter/X API v2** | Tweet search + volume by coin hashtag | `TWITTER_BEARER_TOKEN` |
-| **Reddit API** | Subreddit post/comment sentiment | `REDDIT_CLIENT_ID` + `REDDIT_SECRET` |
-
-### 9.3 AI & LLM
+### 9.2 AI & LLM
 
 | Service | Model | Use Case | Env Var |
 |---------|-------|---------|---------|
@@ -1286,14 +1287,13 @@ Binance WebSocket Streams (server-side)
 | **OpenAI** | `gpt-4o` | Chat fallback | `OPENAI_API_KEY` |
 | **OpenAI** | `text-embedding-3-large` | RAG embeddings | `OPENAI_API_KEY` |
 
-### 9.4 Auth, Email, Payments
+### 9.3 Auth, Email, Payments
 
 | Service | Purpose | Env Var |
 |---------|---------|---------|
 | **Google OAuth 2.0** | Social login | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` |
-| **Resend** | Transactional email (OTP, welcome, alert notifications) | `RESEND_API_KEY` |
-| **Stripe** | Subscription billing (Pro + Institutional) | `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` |
-| **Firebase Cloud Messaging** | Browser push notifications for alerts | `FCM_SERVER_KEY` |
+| **Resend** | Transactional email (OTP, welcome, alerts) | `RESEND_API_KEY` |
+| **Stripe** | Subscription billing | `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` |
 
 ---
 
@@ -1310,24 +1310,20 @@ Email/Password:
 
 Google OAuth:
   Click "Continue with Google"
-  → redirect to /api/auth/google
-  → Google consent screen
-  → callback /api/auth/google/callback
-  → upsert user (google_id)
-  → issue JWT + refresh token
+  → redirect to /api/auth/google → Google consent screen
+  → callback → upsert user (google_id) → issue JWT + refresh token
 
 Token Refresh:
-  Access token expires (15m)
-  → client sends refresh token (cookie)
-  → server validates, issues new access token
-  → old refresh token invalidated (rotation)
+  Access token expires → client sends refresh token (cookie)
+  → server validates, issues new access token (rotation)
 ```
 
-### 10.2 Password Policy
+### 10.2 Storage Keys
 
-- Minimum 8 characters (enforced in SignupForm + API)
-- Must contain: uppercase letter, number
-- bcrypt hash with cost factor 12
+All localStorage/SharedPreferences keys use `coinastra_` prefix:
+- `coinastra_access` — JWT access token
+- `coinastra_refresh` — Refresh token
+- `coinastra_user` — Cached user object
 
 ### 10.3 Rate Limiting
 
@@ -1340,23 +1336,14 @@ Token Refresh:
 | All other endpoints | 100 req/min | Per user (JWT) |
 | Unauthenticated | 20 req/min | Per IP |
 
-### 10.4 Security Headers (Next.js + Nginx)
+### 10.4 Security Headers
 
 ```
 X-Frame-Options: DENY
 X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
 Strict-Transport-Security: max-age=31536000; includeSubDomains
-Content-Security-Policy: (to be configured per domain)
 ```
-
-### 10.5 Data Security
-
-- JWT stored in memory (Flutter) + `flutter_secure_storage`
-- Refresh token in httpOnly cookie (Next.js), secure storage (Flutter)
-- User API keys (exchange connections) encrypted at rest (AES-256)
-- Row-level security: all DB queries scoped to `user_id`
-- GDPR: `DELETE /api/user/account` removes all user data
 
 ---
 
@@ -1364,7 +1351,7 @@ Content-Security-Policy: (to be configured per domain)
 
 ### 11.1 Stripe Integration
 
-**Events handled by `/api/billing/webhook`:**
+**Events handled:**
 - `checkout.session.completed` → create subscription row
 - `customer.subscription.updated` → update plan/status
 - `customer.subscription.deleted` → downgrade to free
@@ -1376,6 +1363,9 @@ Content-Security-Policy: (to be configured per domain)
 |---------|------|-----|--------------|
 | AI Market Summaries | 3/day | Unlimited | Unlimited |
 | Market Memory Engine | No | Yes | Yes |
+| On-Chain Analytics | Basic | Full | Full |
+| Token Unlocks | No | Yes | Yes |
+| Trade Now Signals | No | Yes | Yes |
 | Advanced Sentiment | Basic only | Yes | Yes |
 | New Listings Intel | No | Yes | Yes |
 | Risk Calculator | No | Yes | Yes |
@@ -1398,14 +1388,14 @@ Content-Security-Policy: (to be configured per domain)
 | Job | Schedule | Description |
 |-----|----------|-------------|
 | `ingest-market-history` | Daily 00:00 UTC | Fetch OHLCV for top 100 coins, compute feature vectors, embed, upsert to pgvector |
-| `score-new-listings` | Every 4h | CoinMarketCal + CoinGecko new listings → run AI scoring → cache results |
-| `aggregate-sentiment` | Every 15m | LunarCrush + CryptoPanic + Twitter → score with Claude Haiku → cache in Redis |
-| `check-price-alerts` | Every 30s | Fetch current prices → compare to active alerts → fire WebSocket events + email |
-| `send-alert-emails` | On trigger | Resend email when alert fires (if user has email_alerts = true) |
+| `score-new-listings` | Every 4h | CoinGecko new listings → run AI scoring → cache results |
+| `aggregate-sentiment` | Every 15m | CryptoPanic + social sources → score with Claude Haiku → cache |
+| `check-price-alerts` | Every 30s | Fetch prices → compare to active alerts → fire WebSocket events + email |
+| `send-alert-emails` | On trigger | Resend email when alert fires |
 | `update-fear-greed` | Every 1h | Alternative.me API → cache in Redis |
-| `update-whale-alerts` | Every 2m | Whale Alert API → publish to Redis pub/sub → WebSocket broadcast |
-| `clean-expired-tokens` | Daily 03:00 UTC | Delete expired OTPs and refresh tokens from DB |
-| `update-funding-rates` | Every 30s | Binance fundingRate endpoint → cache + WebSocket broadcast |
+| `update-whale-alerts` | Every 2m | On-chain transaction monitoring → WebSocket broadcast |
+| `clean-expired-tokens` | Daily 03:00 UTC | Delete expired OTPs and refresh tokens |
+| `update-funding-rates` | Every 30s | Cache from Binance WS → WebSocket broadcast |
 
 ---
 
@@ -1413,98 +1403,90 @@ Content-Security-Policy: (to be configured per domain)
 
 ### 13.1 Local Development
 
+**Next.js:**
 ```bash
-# Root directory
-npm run dev
-# Runs concurrently:
-#   - Next.js on :3000  (cd nextjs-app && npm run dev)
-#   - Flutter Web on :5001  (cd flutter-app && flutter run -d web-server --web-port 5001)
-#   - dev-proxy.js on :8080
-
-# Or individually:
 cd nextjs-app && npm run dev
-cd flutter-app && flutter run -d web-server --web-port 5001 --web-hostname localhost
-node dev-proxy.js
+# Runs on http://localhost:3000
+# Auto-loads .env.development (BACKEND_URL=http://localhost:8080)
 ```
 
-### 13.2 Environment Setup
-
+**Flutter:**
+```bash
+cd flutter-app && flutter run -d web-server --web-port 5001 \
+  --web-hostname localhost --dart-define=ENV=dev
+# Connects to http://localhost:8080 (local backend)
 ```
-nextjs-app/.env.local          (local dev — never commit)
-nextjs-app/.env.example        (template — committed)
+
+**Backend (if running locally):**
+```bash
+# Start local backend on :8080
+# Set BINANCE_USE_WEBSOCKET_CACHE=true
 ```
 
-### 13.3 Production Deployment
+### 13.2 Environment Files
 
-**Next.js → Vercel:**
-- Connect GitHub repo → Vercel auto-detects Next.js
+**Next.js — auto-loaded by NODE_ENV:**
+```
+nextjs-app/.env.development   # NODE_ENV=development
+nextjs-app/.env.production    # NODE_ENV=production
+```
+
+**Flutter — switched by --dart-define:**
+```
+--dart-define=ENV=dev   → baseUrl = http://localhost:8080
+(default / omit)        → baseUrl = https://crypto-backend-4557.onrender.com
+```
+
+### 13.3 Production Deployment — Single URL (Vercel)
+
+**Step 1 — Build Flutter:**
+```bash
+cd flutter-app
+flutter build web --release --web-renderer canvaskit --base-href /app/
+```
+
+**Step 2 — Copy Flutter build into Next.js:**
+```bash
+mkdir -p ../nextjs-app/public/app
+cp -r build/web/* ../nextjs-app/public/app/
+```
+
+**Step 3 — Deploy Next.js to Vercel:**
 - Root directory: `nextjs-app`
 - Build command: `npm run build`
-- Output: `.next` (standalone)
-- Set all `NEXT_PUBLIC_*` and server-side env vars in Vercel dashboard
+- Framework: Next.js (no `output: standalone`)
+- Environment variables set in Vercel dashboard
 
-**Flutter Web → Vercel (via GitHub Actions):**
-```yaml
-# .github/workflows/deploy.yml
-on: push (main branch)
-steps:
-  1. Setup Flutter
-  2. flutter pub get
-  3. flutter build web --release --web-renderer canvaskit
-  4. Deploy build/web to Vercel
-Secrets needed: VERCEL_FLUTTER_TOKEN, VERCEL_ORG_ID, VERCEL_FLUTTER_PROJECT_ID
-```
+**Result:** Single URL `coisastra-main.vercel.app`
+- `/` → Next.js landing + auth
+- `/app/` → Flutter Web (static files served from `public/app/`)
+- `/app/:path*` → Flutter Web (rewrite to `index.html` for client-side routing)
 
-**Backend API → Railway / Render / Fly.io:**
-- Dockerfile-based deployment
-- PostgreSQL: managed instance (Railway Postgres, Supabase, or Neon)
-- Redis: Upstash (serverless Redis, free tier available)
+### 13.4 Backend — Render.com
 
-**Docker Compose (optional self-hosted):**
-```yaml
-services:
-  nextjs:   port 3000
-  flutter:  port 5000
-  nginx:    ports 80, 443 (reverse proxy)
-```
-
-### 13.4 Nginx Production Config
-
-```
-Domain:        aitradingcopilot.com
-SSL:           /etc/nginx/ssl/cert.pem + key.pem
-HTTP → HTTPS:  301 redirect
-Gzip:          enabled (text/html, text/css, application/javascript, application/json)
-WebSocket:     Upgrade + Connection headers for /socket.io/
-
-Routing:
-  /app/* /dashboard/* /analysis/* /charts/* /chat/*
-  /memory/* /sentiment/* /listings/* /risk/* /journal/*
-  /alerts/* /profile/*
-                → proxy_pass Flutter Web (Vercel URL)
-
-  /* (everything else)
-                → proxy_pass Next.js (Vercel URL)
-```
+- **URL:** `https://crypto-backend-4557.onrender.com`
+- **Platform:** Render (Docker or Node.js service)
+- **PostgreSQL:** Managed Render Postgres or Supabase
+- **Redis:** Upstash (serverless, free tier)
+- **Key env vars:** `BINANCE_USE_WEBSOCKET_CACHE=true`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
 
 ### 13.5 Post-Deployment Checklist
 
-- [ ] Next.js Vercel project created and deployed
-- [ ] Flutter Web Vercel project created
-- [ ] GitHub Actions secrets configured (Vercel tokens)
-- [ ] Backend API deployed (Railway / Render)
-- [ ] PostgreSQL instance created + migrations run
+- [x] Flutter Web built with `--base-href /app/` and `<base href="$FLUTTER_BASE_HREF">`
+- [x] Flutter copied to `nextjs-app/public/app/`
+- [x] Next.js deployed to Vercel (coisastra-main.vercel.app)
+- [x] Backend live on Render (crypto-backend-4557.onrender.com)
+- [x] WebSocket (Socket.IO) using production backend URL
+- [x] `output: "standalone"` removed from next.config.mjs (causes Vercel 404)
+- [x] All Next.js rewrites environment-aware (prod vs. dev)
+- [ ] PostgreSQL migrations run in production
 - [ ] pgvector extension enabled
-- [ ] Redis instance created (Upstash)
-- [ ] All environment variables set in each service
-- [ ] SSL certificate installed (Let's Encrypt or Vercel auto-SSL)
-- [ ] DNS A/CNAME records updated
+- [ ] All environment variables set in Vercel + Render dashboards
 - [ ] Stripe webhook endpoint registered
-- [ ] Google OAuth redirect URIs updated to production domain
-- [ ] CORS configured: `api.aitradingcopilot.com` → allow `aitradingcopilot.com`
+- [ ] Google OAuth redirect URIs updated to coisastra-main.vercel.app
+- [ ] CORS configured for production backend
 - [ ] Rate limiting enabled
 - [ ] Sentry error tracking set up
-- [ ] Background job workers running
 
 ---
 
@@ -1512,12 +1494,11 @@ Routing:
 
 ### 14.1 Color Palette
 
-**Background (shared across Next.js + Flutter):**
+**Background:**
 | Token | Hex | Use |
 |-------|-----|-----|
 | `bg-primary` | `#0A0B0F` | Main page background |
 | `bg-secondary` | `#0F1117` | Section backgrounds |
-| `bg-tertiary` | `#13151D` | Nested backgrounds |
 | `bg-card` | `#141720` | Card backgrounds |
 | `bg-card-hover` | `#1A1D28` | Card hover state |
 
@@ -1530,30 +1511,20 @@ Routing:
 | `brand-blue` | `#3B82F6` | Info, links, secondary actions |
 | `brand-purple` | `#8B5CF6` | AI features, premium |
 | `brand-cyan` | `#06B6D4` | Market data, listings |
-| `brand-amber` | `#F59E0B` | Warnings, risk indicators |
+| `brand-amber` | `#F59E0B` | Warnings, risk indicators, neutral on-chain |
 | `brand-pink` | `#EC4899` | Trade journal, psychology |
 | `brand-orange` | `#F97316` | Alerts |
 
-**Text:**
-| Token | Opacity | Use |
-|-------|---------|-----|
-| `text-primary` | 100% | Headings, primary content |
-| `text-secondary` | 60% | Body text, descriptions |
-| `text-muted` | 30% | Placeholders, disabled |
-| `text-disabled` | 15% | Truly disabled |
-
-**Borders:**
-| Token | Opacity | Use |
-|-------|---------|-----|
-| `border-subtle` | 6% white | Default card borders |
-| `border-default` | 10% white | Active/visible borders |
-| `border-bright` | 25% white | Highlighted borders |
-| `border-green` | 24% green | Focus/selected state |
+**On-Chain Level Colors:**
+| Level | Color | Used In |
+|-------|-------|---------|
+| `bullish` | `brand-green` | On-chain indicator cards |
+| `neutral` | `brand-amber` | On-chain indicator cards |
+| `bearish` | `brand-red` | On-chain indicator cards |
 
 ### 14.2 Typography
 
 **Fonts:** Inter (primary), JetBrains Mono (code/numbers)
-**Loaded via:** Google Fonts (Next.js layout.tsx + Flutter pubspec.yaml)
 
 | Style | Size | Weight | Use |
 |-------|------|--------|-----|
@@ -1567,18 +1538,7 @@ Routing:
 | Body Small | 12px | 400 | Captions, metadata |
 | Mono | 13px | 500 | Prices, numbers, code |
 
-### 14.3 Animations
-
-| Animation | Duration | Use |
-|-----------|----------|-----|
-| `float` | 6s loop | Cards, icons floating |
-| `glow-pulse` | 2s loop | Live indicator, green glows |
-| `slide-up` | 0.5s | Page/section entry |
-| `fade-in` | 0.8s | Element reveal |
-| `ticker` | 30s loop | Price ticker tape |
-| `pulse-slow` | 4s loop | Status indicators |
-
-### 14.4 Responsive Breakpoints
+### 14.3 Responsive Breakpoints
 
 | Name | Width | Layout |
 |------|-------|--------|
@@ -1590,153 +1550,150 @@ Routing:
 
 ## 15. ENVIRONMENT VARIABLES
 
-### 15.1 Next.js (.env.local)
+### 15.1 Next.js
 
+**`.env.development`** (auto-loaded in `npm run dev`):
 ```env
-# App URLs
-NEXT_PUBLIC_APP_URL=https://aitradingcopilot.com
-NEXT_PUBLIC_FLUTTER_DASHBOARD_URL=https://coinpilot-flutter.vercel.app
 FLUTTER_APP_URL=http://localhost:5001
-NEXT_PUBLIC_API_URL=https://api.aitradingcopilot.com
-NEXT_PUBLIC_WS_URL=wss://api.aitradingcopilot.com
-NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+BACKEND_URL=http://localhost:8080
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_FLUTTER_DASHBOARD_URL=http://localhost:8080
+NEXT_PUBLIC_SOCKET_URL=http://localhost:8080
 
-# Auth (server-side only)
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=https://aitradingcopilot.com
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# Market Data APIs (server-side only)
 COINGECKO_API_KEY=
 BINANCE_API_KEY=
-BINANCE_SECRET=
-
-# AI (server-side only)
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
+
+NEXTAUTH_SECRET=coinastra-dev-secret
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 ```
 
-### 15.2 Backend API (.env)
+**`.env.production`** (auto-loaded in Vercel):
+```env
+FLUTTER_APP_URL=https://coisastra-main.vercel.app
+BACKEND_URL=https://crypto-backend-4557.onrender.com
+NEXT_PUBLIC_APP_URL=https://coisastra-main.vercel.app
+NEXT_PUBLIC_FLUTTER_DASHBOARD_URL=https://coisastra-main.vercel.app
+NEXT_PUBLIC_SOCKET_URL=https://crypto-backend-4557.onrender.com
+
+COINGECKO_API_KEY=
+BINANCE_API_KEY=
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+
+NEXTAUTH_SECRET=<strong-secret>
+NEXTAUTH_URL=https://coisastra-main.vercel.app
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
+
+### 15.2 Flutter
+
+Environment is controlled entirely by `--dart-define=ENV=dev` at build time.
+No `.env` file needed — all config is in `EndPoints` class:
+
+```dart
+static const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+static const String baseUrl = _env == 'dev'
+    ? 'http://localhost:8080'
+    : 'https://crypto-backend-4557.onrender.com';
+```
+
+### 15.3 Backend API (Render.com)
 
 ```env
-# Server
 NODE_ENV=production
-PORT=4000
-API_URL=https://api.aitradingcopilot.com
-FRONTEND_URL=https://aitradingcopilot.com
+PORT=8080
+API_URL=https://crypto-backend-4557.onrender.com
+FRONTEND_URL=https://coisastra-main.vercel.app
 
-# Database
-DATABASE_URL=postgresql://user:pass@host:5432/coinpilot
+DATABASE_URL=postgresql://user:pass@host:5432/coinastra
 REDIS_URL=redis://default:pass@host:6379
 
-# Auth
 JWT_SECRET=
 JWT_EXPIRY=15m
 REFRESH_TOKEN_SECRET=
 REFRESH_TOKEN_EXPIRY=7d
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=https://api.aitradingcopilot.com/api/auth/google/callback
+GOOGLE_CALLBACK_URL=https://crypto-backend-4557.onrender.com/api/auth/google/callback
 
-# Email
 RESEND_API_KEY=
-FROM_EMAIL=noreply@aitradingcopilot.com
+FROM_EMAIL=noreply@coisastra-main.vercel.app
 
-# Market Data
 COINGECKO_API_KEY=
 BINANCE_API_KEY=
 BINANCE_SECRET=
-WHALE_ALERT_API_KEY=
-GLASSNODE_API_KEY=
-COINMARKETCAL_API_KEY=
+BINANCE_USE_WEBSOCKET_CACHE=true
 
-# Sentiment
-LUNARCRUSH_API_KEY=
-CRYPTOPANIC_API_KEY=
-TWITTER_BEARER_TOKEN=
-REDDIT_CLIENT_ID=
-REDDIT_SECRET=
-
-# AI / LLM
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 DEFAULT_AI_MODEL=claude-sonnet-4-6
 
-# Vector DB (pgvector uses DATABASE_URL above — or Pinecone below)
-PINECONE_API_KEY=
-PINECONE_INDEX=coinpilot-market-memory
-PINECONE_ENVIRONMENT=us-east-1-aws
-
-# Payments
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRO_PRICE_ID=
 STRIPE_ELITE_PRICE_ID=
-
-# Push Notifications
-FCM_SERVER_KEY=
 ```
 
 ---
 
 ## 16. DEVELOPMENT ROADMAP
 
-### Phase 1 — Frontend (COMPLETE)
-- [x] Next.js landing page — all components
+### Phase 1 — Frontend + UI (COMPLETE ✅)
+- [x] Next.js landing page — all components (renamed Coinastra)
 - [x] Next.js auth pages — login, signup, OTP, forgot password
 - [x] Next.js blog page
 - [x] Flutter app shell — sidebar, topbar, responsive layout
-- [x] All 11 Flutter dashboard screens (UI-only, mock data)
+- [x] All 16 Flutter dashboard screens
 - [x] Design system — colors, typography, animations
-- [x] Routing architecture (GoRouter + Next.js rewrites)
-- [x] Docker Compose + Nginx config
-- [x] GitHub Actions CI/CD workflow
-- [x] Vercel deployment documentation
+- [x] Routing architecture (GoRouter 16 routes + Next.js rewrites)
 
-### Phase 2 — Backend Foundation (NOT STARTED)
-- [ ] Choose backend framework (Node.js + Fastify recommended)
-- [ ] Set up PostgreSQL + run migrations for all 9 tables
-- [ ] Enable pgvector extension
-- [ ] Set up Redis (Upstash)
-- [ ] Implement auth endpoints (register, login, OTP, Google OAuth, refresh)
-- [ ] Implement user profile endpoints
-- [ ] Set up Resend for transactional email
+### Phase 2 — Backend Integration (COMPLETE ✅)
+- [x] Backend live on Render (`crypto-backend-4557.onrender.com`)
+- [x] Dashboard REST endpoints wired (markets, trending, fear-greed, funding rates)
+- [x] Socket.IO WebSocket (live ticker, whale alerts, funding rates)
+- [x] AI market analysis endpoint (`/dashboard/trade-analysis`)
+- [x] Trade Now endpoints (signal, OI, L/S, liquidations)
+- [x] On-chain indicators endpoint (`/onchain/indicators`) — per-coin, level-colored
+- [x] Exchange flows endpoints (netflow + breakdown) — per-coin, updates on coin change
+- [x] Token unlocks endpoints
+- [x] Market Memory endpoints (RAG patterns, similar events, market cycles)
+- [x] Predictions leaderboard endpoints
+- [x] Binance WebSocket cache (replaces direct browser Binance calls)
 
-### Phase 3 — Market Data Layer (NOT STARTED)
-- [ ] Build CoinGecko proxy with Redis caching
-- [ ] Build Binance proxy (REST + WebSocket)
-- [ ] Implement WebSocket server (Socket.io + Redis adapter)
-- [ ] Set up price feed pipeline (Binance WS → Redis pub/sub → Socket.io)
-- [ ] Implement all `/api/market/*` endpoints
-- [ ] `/api/dashboard/summary` aggregation endpoint
+### Phase 3 — Deployment (COMPLETE ✅)
+- [x] Flutter build with `--base-href /app/` + `$FLUTTER_BASE_HREF` in index.html
+- [x] Single Vercel URL (`coisastra-main.vercel.app`) serving both Next.js + Flutter
+- [x] Removed `output: "standalone"` (Vercel compatibility fix)
+- [x] Dev/prod environment switching (one variable: `--dart-define=ENV=dev`)
+- [x] Next.js `.env.development` / `.env.production` (automatic NODE_ENV switching)
+- [x] WebSocket connecting to production backend (not hardcoded localhost)
+- [x] Funding rate "View All" with 100-coin local search
 
-### Phase 4 — AI & RAG (NOT STARTED)
-- [ ] Integrate Anthropic SDK (Claude Sonnet 4.6)
-- [ ] Build AI analysis endpoint with prompt engineering
-- [ ] Build AI chat endpoint with SSE streaming
-- [ ] Build Market Memory ingestion pipeline (nightly job)
-- [ ] Build Market Memory query endpoint (pgvector cosine search)
-- [ ] Build sentiment scoring pipeline (Claude Haiku batch)
-- [ ] Build new listings AI scoring
+### Phase 4 — User Data & Personalization (PLANNED)
+- [ ] Auth endpoints (register, login, OTP, Google OAuth, refresh)
+- [ ] User profile API
+- [ ] Portfolio CRUD (holdings, performance)
+- [ ] Trade journal CRUD (log trades, analytics, psychology)
+- [ ] Alerts system (creation + background checker + WebSocket fire)
+- [ ] AI Chat (streaming SSE + history persistence)
 
-### Phase 5 — Feature Completion (NOT STARTED)
-- [ ] Connect all Flutter screens to live API endpoints
-- [ ] Replace all mock data with real API calls
-- [ ] Implement trade journal CRUD + analytics
-- [ ] Implement portfolio CRUD
-- [ ] Implement alerts system (creation + background checker + WebSocket fire)
-- [ ] Integrate Stripe billing (checkout, portal, webhook)
-- [ ] Build all background BullMQ jobs
+### Phase 5 — AI & RAG (PLANNED)
+- [ ] Market Memory ingestion pipeline (nightly job, pgvector)
+- [ ] Sentiment scoring pipeline (Claude Haiku batch)
+- [ ] New listings AI scoring
 
-### Phase 6 — Polish & Launch (NOT STARTED)
+### Phase 6 — Billing & Launch (PLANNED)
+- [ ] Stripe billing (checkout, portal, webhook)
+- [ ] Feature gating enforcement
 - [ ] Rate limiting middleware
 - [ ] Error monitoring (Sentry)
-- [ ] Performance audit (Lighthouse, API response times)
-- [ ] Security audit
-- [ ] Load testing
 - [ ] Beta user onboarding
-- [ ] Production launch on aitradingcopilot.com
+- [ ] Production launch
 
 ---
 
@@ -1747,29 +1704,43 @@ FCM_SERVER_KEY=
 | **Next.js Pages** | 8 |
 | **Next.js Landing Components** | 12 |
 | **Next.js Auth Components** | 4 |
-| **Flutter Screens** | 11 |
+| **Flutter Screens** | 16 |
 | **Flutter Dashboard Widgets** | 7 |
-| **Flutter Core Widgets** | 4 |
-| **Planned API Endpoints** | 46 |
-| **AI Endpoints** | 7 |
-| **Third-Party Service Integrations** | 14 |
+| **Flutter Core Widgets** | 5 |
+| **Flutter Riverpod Providers** | 21 |
+| **Implemented Backend Endpoints** | 35+ |
+| **Planned Backend Endpoints** | 20+ |
+| **Third-Party Service Integrations** | 8 (active) |
 | **PostgreSQL Tables** | 9 |
 | **Vector Table** | 1 (market_patterns) |
 | **Redis Key Namespaces** | 14 |
-| **WebSocket Event Types** | 8 |
+| **WebSocket Event Types** | 4 (live) |
 | **Background Jobs** | 9 |
 | **Auth Methods** | 2 (email/password + Google OAuth) |
 | **Subscription Tiers** | 3 (Free, Pro, Institutional) |
 | **Pricing Plans** | 6 (3 tiers × monthly/annual) |
 | **Chart Timeframes** | 7 |
 | **Technical Indicators** | 5 |
-| **Sentiment Sources** | 4 |
+| **On-Chain Indicator Types** | 8+ |
 | **Alert Types** | 6 |
 | **Responsive Breakpoints** | 3 |
 | **Brand Colors** | 9 |
-| **Custom Animations** | 6 |
-| **Total Files (Frontend)** | 70+ |
+| **Production URL** | coisastra-main.vercel.app |
+| **Backend URL** | crypto-backend-4557.onrender.com |
+| **Total Dart Files** | 80+ |
 
 ---
 
-*Document prepared by comprehensive codebase analysis — CoinPilot v1.0.0 — 2026-05-19*
+*Coinastra v1.1.0 — 2026-05-25 — Frontend + Backend integration complete, live on Vercel*
+
+
+
+deploy both--
+
+1)flutter build web --release --base-href /app/
+2)cp -r build/web/. ../nextjs-app/public/app/            
+
+cd ..
+git add .
+git commit -m "send otp"
+git push origin dev_krishna

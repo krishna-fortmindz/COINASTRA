@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, CheckCircle, ArrowLeft, Zap } from "lucide-react";
+import { setTokens } from "@/lib/auth";
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") ?? "";
+  const type = (searchParams.get("type") ?? "email_verification") as "email_verification" | "password_reset";
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [error, setError] = useState("");
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleChange = (i: number, val: string) => {
@@ -23,14 +31,61 @@ export default function VerifyOTPPage() {
   };
 
   const handleVerify = async () => {
-    if (otp.join("").length < 6) return;
+    const code = otp.join("");
+    if (code.length < 6) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setVerified(true);
-    setLoading(false);
-    setTimeout(() => {
-      window.location.href = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:5001";
-    }, 1500);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: code, type }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.message ?? "Invalid or expired code. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (type === "email_verification") {
+        const d = data?.data ?? data;
+        const accessToken =
+          d?.accessToken ?? d?.access_token ?? d?.token ?? d?.jwt ??
+          d?.tokens?.accessToken ?? d?.tokens?.access_token;
+        const refreshToken =
+          d?.refreshToken ?? d?.refresh_token ?? d?.refresh ??
+          d?.tokens?.refreshToken ?? d?.tokens?.refresh_token;
+        if (accessToken) setTokens(String(accessToken), refreshToken ? String(refreshToken) : "");
+        const user = d?.user ?? d?.profile;
+        if (user) localStorage.setItem("coinastra_user", JSON.stringify(user));
+        setVerified(true);
+        setTimeout(() => {
+          const base = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
+          window.location.replace(base === "http://localhost:8080" ? `${base}/dashboard` : "/app/");
+        }, 1500);
+      } else {
+        // password_reset — OTP verified server-side, just pass email
+        window.location.replace(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResending(true);
+    setError("");
+    try {
+      await fetch("/api/auth/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } catch {}
+    setResending(false);
   };
 
   return (
@@ -64,11 +119,24 @@ export default function VerifyOTPPage() {
             ) : (
               <>
                 <div className="mb-6">
-                  <h1 className="text-2xl font-bold text-white mb-2">Verify your email</h1>
+                  <h1 className="text-2xl font-bold text-white mb-2">
+                    {type === "password_reset" ? "Reset your password" : "Verify your email"}
+                  </h1>
                   <p className="text-sm text-white/40">
-                    We sent a 6-digit code to your email address
+                    We sent a 6-digit code to{" "}
+                    {email ? <span className="text-white/60">{email}</span> : "your email address"}
+                  </p>
+                  <p className="text-xs text-white/30 mt-2 flex items-center justify-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00ff88]" />
+                    Sent successfully &mdash; check your spam if you don&apos;t see it
                   </p>
                 </div>
+
+                {error && (
+                  <div className="mb-4 px-3 py-2.5 rounded-xl text-xs text-[#ff3366] border border-[#ff3366]/20 bg-[#ff3366]/5">
+                    {error}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-center gap-2 mb-6">
                   {otp.map((digit, i) => (
@@ -89,13 +157,19 @@ export default function VerifyOTPPage() {
                   disabled={loading || otp.join("").length < 6}
                   className="btn-primary w-full py-3.5 text-sm disabled:opacity-50 mb-4"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify Account"}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                    type === "password_reset" ? "Continue to Reset" : "Verify Account"
+                  )}
                 </button>
 
                 <p className="text-sm text-white/30">
-                  Didn't receive the code?{" "}
-                  <button className="text-[#00ff88] hover:text-[#00cc6a] font-medium transition-colors">
-                    Resend
+                  Didn&apos;t receive the code?{" "}
+                  <button
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="text-[#00ff88] hover:text-[#00cc6a] font-medium transition-colors disabled:opacity-50"
+                  >
+                    {resending ? "Sending…" : "Resend"}
                   </button>
                 </p>
 
@@ -109,5 +183,13 @@ export default function VerifyOTPPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }

@@ -153,6 +153,7 @@ Recommended runtime: **Node.js (Fastify) or Python (FastAPI)** — both have mat
 
 ---
 
+
 ### 9. Dashboard Widgets
 
 | Method | Route | Description |
@@ -647,3 +648,119 @@ FCM_SERVER_KEY=                        # Firebase Cloud Messaging for mobile ale
 | Redis key namespaces | 11 |
 | Background jobs | 7 |
 | WebSocket event types | 6 |
+
+
+
+Here's the full backend endpoint map per section:
+
+  ---
+  Trade Now
+  
+  ┌──────────────────────────────────────────────┬─────────────────────────────────┬────────┬──────────────────────────┐
+  │                     Data                     │            Endpoint             │ Method │          Params          │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ AI signal (verdict, confidence, entry/TP/SL) │ /api/v1/analysis/signal         │ GET    │ symbol=BTCUSDT           │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ Funding rate                                 │ /api/v1/dashboard/funding-rates │ GET    │ symbols=BTCUSDT — exists │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ Open Interest + change                       │ /api/v1/analysis/open-interest  │ GET    │ symbol=BTCUSDT           │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ Long/Short ratio                             │ /api/v1/analysis/long-short     │ GET    │ symbol=BTCUSDT           │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ Liquidation walls                            │ /api/v1/analysis/liquidations   │ GET    │ symbol=BTCUSDT           │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ News & social sentiment                      │ /api/v1/analysis/sentiment      │ GET    │ symbol=BTCUSDT           │
+  ├──────────────────────────────────────────────┼─────────────────────────────────┼────────┼──────────────────────────┤
+  │ Historical setups                            │ /api/v1/analysis/history        │ GET    │ symbol=BTCUSDT&limit=5   │
+  └──────────────────────────────────────────────┴─────────────────────────────────┴────────┴──────────────────────────┘
+  
+  ▎ All /api/v1/analysis/* routes are new — need to be created on backend.
+  
+  ---
+  Charts
+
+  ┌──────────────────────┬─────────────────────────────┬────────┬───────────────────────────────────────────────┐
+  │         Data         │          Endpoint           │ Method │                    Params                     │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ Candlestick OHLCV    │ /api/v1/dashboard/klines    │ GET    │ symbol=BTCUSDT&interval=1h&limit=100 — exists │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ RSI values           │ /api/v1/analysis/indicators │ GET    │ symbol=BTCUSDT&type=rsi&interval=1h           │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ MACD values          │ /api/v1/analysis/indicators │ GET    │ symbol=BTCUSDT&type=macd&interval=1h          │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ EMA / Bollinger      │ /api/v1/analysis/indicators │ GET    │ symbol=BTCUSDT&type=ema&interval=1h           │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ AI pattern detection │ /api/v1/analysis/patterns   │ GET    │ symbol=BTCUSDT&interval=1h                    │
+  ├──────────────────────┼─────────────────────────────┼────────┼───────────────────────────────────────────────┤
+  │ Live candle updates  │ Socket.IO market:kline      │ —      │ subscribe via dashboard:subscribe             │
+  └──────────────────────┴─────────────────────────────┴────────┴───────────────────────────────────────────────┘
+  
+  ▎ /api/v1/dashboard/klines already exists. /api/v1/analysis/indicators and market:kline socket are new.
+  
+  ---
+  Order Book
+
+  ┌────────────────────────┬───────────────────────────────┬────────┬───────────────────────────────────┐
+  │          Data          │           Endpoint            │ Method │              Params               │
+  ├────────────────────────┼───────────────────────────────┼────────┼───────────────────────────────────┤
+  │ Bids & asks depth      │ /api/v1/dashboard/order-book  │ GET    │ symbol=BTCUSDT&limit=20 — exists  │
+  ├────────────────────────┼───────────────────────────────┼────────┼───────────────────────────────────┤
+  │ Last price / spread    │ /api/v1/dashboard/ticker-24hr │ GET    │ symbol=BTCUSDT — exists           │
+  ├────────────────────────┼───────────────────────────────┼────────┼───────────────────────────────────┤
+  │ Key price levels (S/R) │ /api/v1/analysis/levels       │ GET    │ symbol=BTCUSDT                    │
+  ├────────────────────────┼───────────────────────────────┼────────┼───────────────────────────────────┤
+  │ Live book updates      │ Socket.IO market:trade        │ —      │ subscribe via dashboard:subscribe │
+  └────────────────────────┴───────────────────────────────┴────────┴───────────────────────────────────┘
+  
+  ▎ 2 REST endpoints already exist. market:trade socket and /api/v1/analysis/levels are new.
+  
+  ---
+  Summary — What backend needs to build
+
+  Already exists (just needs wiring in Flutter):
+  - /api/v1/dashboard/klines → Charts
+  - /api/v1/dashboard/order-book → Order Book
+  - /api/v1/dashboard/ticker-24hr → Order Book
+  - /api/v1/dashboard/funding-rates → Trade Now
+
+  New routes needed:
+  /api/v1/analysis/signal          → Trade Now verdict, entry/TP/SL
+  /api/v1/analysis/open-interest   → Trade Now OI
+  /api/v1/analysis/long-short      → Trade Now L/S ratio
+  /api/v1/analysis/liquidations    → Trade Now liq. walls
+  /api/v1/analysis/sentiment       → Trade Now news sentiment
+  /api/v1/analysis/history         → Trade Now past setups
+  /api/v1/analysis/indicators      → Charts RSI/MACD/EMA/BB
+  /api/v1/analysis/patterns        → Charts AI pattern overlay
+  /api/v1/analysis/levels          → Order Book S/R levels
+  
+  Socket.IO events needed (currently subscribed but not handled):
+  market:kline   → live candle updates for Charts
+  market:trade   → live trade feed for Order Book
+ ---
+  Flutter
+
+  ┌─────────────────────────────────────────────┬────────────────────┐
+  │                   Command                   │    Environment     │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter run -d chrome --dart-define=ENV=dev │ Local backend      │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter run -d chrome                       │ Production backend │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter build web --dart-define=ENV=dev     │ Build with local   │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter build web                           │ Build with prod    │
+  └─────────────────────────────────────────────┴────────────────────┘
+
+  ---
+  Next.js
+
+  ┌───────────────────┬────────────────────────────────────────┐
+  │      Command      │              Environment               │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npm run dev       │ Auto uses .env.development (localhost) │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npm run build     │ Auto uses .env.production (live URLs)  │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npx vercel --prod │ Uses .env.production                   │
+  └───────────────────┴────────────────────────────────────────┘
