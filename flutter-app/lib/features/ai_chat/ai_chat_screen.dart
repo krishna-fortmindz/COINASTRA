@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/dashboard_provider.dart';
@@ -509,14 +510,93 @@ class _ChatBubble extends StatelessWidget {
                 ),
                 child: message.isStreaming && message.text.isEmpty
                     ? const _TypingDots()
-                    : Text(
-                        message.text,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xCCFFFFFF),
-                          height: 1.6,
-                        ),
-                      ),
+                    : message.isUser
+                        ? Text(
+                            message.text,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xCCFFFFFF),
+                              height: 1.6,
+                            ),
+                          )
+                        : MarkdownBody(
+                            data: message.text,
+                            selectable: true,
+                            styleSheet: MarkdownStyleSheet(
+                              p: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xCCFFFFFF),
+                                height: 1.6,
+                              ),
+                              strong: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                height: 1.6,
+                              ),
+                              em: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xCCFFFFFF),
+                                fontStyle: FontStyle.italic,
+                                height: 1.6,
+                              ),
+                              code: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.brandGreen,
+                                fontFamily: 'JetBrainsMono',
+                                backgroundColor: Colors.transparent,
+                              ),
+                              codeblockDecoration: BoxDecoration(
+                                color: AppColors.bgPrimary,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: AppColors.borderSubtle),
+                              ),
+                              blockquoteDecoration: BoxDecoration(
+                                border: Border(
+                                  left: BorderSide(
+                                    color: AppColors.brandGreen
+                                        .withAlpha(120),
+                                    width: 3,
+                                  ),
+                                ),
+                              ),
+                              blockquotePadding: const EdgeInsets.only(
+                                  left: 12),
+                              h1: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700),
+                              h2: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700),
+                              h3: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                              listBullet: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.brandGreen),
+                              tableHead: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                              tableBody: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xCCFFFFFF)),
+                              tableBorder: TableBorder.all(
+                                  color: AppColors.borderSubtle,
+                                  width: 0.5),
+                              horizontalRuleDecoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                      color: AppColors.borderSubtle,
+                                      width: 0.5),
+                                ),
+                              ),
+                            ),
+                          ),
               ),
               // Streaming cursor
               if (message.isStreaming && message.text.isNotEmpty)
@@ -658,6 +738,10 @@ class _ChatInput extends ConsumerWidget {
               child: TextField(
                 controller: controller,
                 style: const TextStyle(fontSize: 14, color: Colors.white),
+                minLines: 1,
+                maxLines: 6,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
                 onSubmitted: isStreaming ? null : onSend,
                 enabled: !isStreaming,
                 decoration: InputDecoration(

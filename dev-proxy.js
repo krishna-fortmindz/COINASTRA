@@ -22,6 +22,7 @@ const PROXY_PORT = 8080;
 
 // Routes that belong to the Flutter dashboard
 const FLUTTER_APP_ROUTES = [
+  "/app",
   "/dashboard",
   "/analysis",
   "/charts",
@@ -64,6 +65,7 @@ const FLUTTER_ASSET_PATTERNS = [
   /^\/canvaskit\//,
   /^\/assets\//,
   /^\/icons\//,
+  /^\/packages\//,           // DDC package modules (intl, timeago, etc.)
   /^\/version\.json/,
   /^\/stack_trace_mapper\.js/,
   /^\/ddc_module_loader\.js/,
@@ -71,6 +73,7 @@ const FLUTTER_ASSET_PATTERNS = [
   /^\/[^/]+\.ddc\.js/,
   /^\/[^/]+\.dart\.lib\.js/,
   /^\/[^/]+\.bootstrap\.js/,
+  /^\/on_load_end_bootstrap\.js/,
   /^\/favicon\.png/,
   /^\/manifest\.json/,
   /^\/site\.webmanifest/,

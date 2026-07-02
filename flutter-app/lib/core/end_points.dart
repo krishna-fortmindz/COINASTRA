@@ -98,9 +98,27 @@ class EndPoints {
       '$baseUrl/api/sentiment/coins/$coinId';
   static const String sentimentOnChain = '$baseUrl/api/sentiment/onchain';
   // ─────────────────────────────────────────────────────────────
-  // Portfolio (NEW — backend to build)
+  // Portfolio
   // ─────────────────────────────────────────────────────────────
   static const String portfolio = '$apiBaseUrl/portfolio';
+  static const String portfolioPositions = '$apiBaseUrl/portfolio/positions';
+  static const String portfolioSummary = '$apiBaseUrl/portfolio/summary';
+  static const String portfolioTips = '$apiBaseUrl/portfolio/tips';
+
+  static String portfolioPosition(String id) => '$portfolioPositions/$id';
+  static String closePortfolioPosition(String id) =>
+      '$portfolioPositions/$id/close';
+
+  static String portfolioWithParams({
+    String status = 'open',
+    String currency = 'USD',
+  }) =>
+      Uri.parse(portfolio).replace(queryParameters: {
+        'status': status,
+        'currency': currency,
+      }).toString();
+
+  // kept for backward compatibility
   static const String portfolioHoldings = '$apiBaseUrl/portfolio/holdings';
   static const String portfolioPerformance =
       '$apiBaseUrl/portfolio/performance';

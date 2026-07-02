@@ -17,7 +17,7 @@ const nextConfig = {
   async rewrites() {
     if (process.env.NODE_ENV !== "production") {
       return [
-        { source: "/app/:path*", destination: "http://localhost:5001/app/:path*" },
+        { source: "/app/:path*", destination: "http://localhost:5001/:path*" },
         { source: "/dashboard/:path*", destination: "http://localhost:5001/dashboard/:path*" },
         { source: "/analysis/:path*", destination: "http://localhost:5001/analysis/:path*" },
         { source: "/charts/:path*", destination: "http://localhost:5001/charts/:path*" },
