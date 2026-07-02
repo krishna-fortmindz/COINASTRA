@@ -169,6 +169,7 @@ class _MoreSheet extends StatelessWidget {
       _MoreEntry('/token-unlocks', Icons.lock_open_rounded, 'Token Unlocks', AppColors.brandAmber),
     ]),
     _MoreSection('TRADING', [
+      _MoreEntry('/portfolio', Icons.pie_chart_rounded, 'Portfolio', AppColors.brandBlue),
       _MoreEntry('/risk', Icons.shield_rounded, 'Risk Manager', AppColors.brandRed),
       _MoreEntry('/journal', Icons.book_rounded, 'Trade Journal', AppColors.brandBlue),
     ]),
