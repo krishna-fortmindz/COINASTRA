@@ -51,6 +51,7 @@ class AppSidebar extends StatelessWidget {
                   _SidebarItem('/token-unlocks', Icons.lock_open_rounded, 'Token Unlocks', currentRoute),
                   const SizedBox(height: 16),
                   const _SectionLabel('TRADING'),
+                  _SidebarItem('/portfolio', Icons.pie_chart_rounded, 'Portfolio', currentRoute),
                   _SidebarItem('/risk', Icons.shield_rounded, 'Risk Manager', currentRoute),
                   _SidebarItem('/journal', Icons.book_rounded, 'Trade Journal', currentRoute),
                   const SizedBox(height: 16),

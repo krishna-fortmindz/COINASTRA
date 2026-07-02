@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../providers/portfolio_provider.dart';
+import '../../providers/dashboard_provider.dart';
+import '../../core/remote/data/dashboard/models/dashboard_models.dart';
 
 class PortfolioScreen extends ConsumerStatefulWidget {
   const PortfolioScreen({super.key});
@@ -987,6 +989,7 @@ class _AddPositionSheetState extends State<_AddPositionSheet> {
   final _liq = TextEditingController();
   final _notes = TextEditingController();
   String _direction = 'long';
+  MarketCoin? _selectedCoin;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -1000,7 +1003,35 @@ class _AddPositionSheetState extends State<_AddPositionSheet> {
     super.dispose();
   }
 
+  void _openCoinPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _CoinPickerSheet(
+        onSelected: (coin) {
+          setState(() => _selectedCoin = coin);
+          _symbol.text = coin.symbol;
+          if (_entry.text.isEmpty) {
+            final p = coin.currentPrice;
+            _entry.text = p >= 1 ? p.toStringAsFixed(2) : p.toStringAsFixed(6);
+          }
+        },
+      ),
+    );
+  }
+
   Future<void> _submit() async {
+    if (_symbol.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a coin first'),
+          backgroundColor: AppColors.brandRed),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     final sym = _symbol.text.trim().toUpperCase();
     final body = {
@@ -1103,12 +1134,82 @@ class _AddPositionSheetState extends State<_AddPositionSheet> {
               ),
               const SizedBox(height: 14),
 
-              _InputField(
-                label: 'Symbol (e.g. BTC or BTCUSDT)',
-                controller: _symbol,
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Required' : null,
+              // Symbol picker
+              GestureDetector(
+                onTap: _openCoinPicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgTertiary,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_selectedCoin != null) ...[
+                        Container(
+                          width: 26, height: 26,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7931A).withAlpha(30),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _selectedCoin!.symbol[0],
+                              style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w800,
+                                color: Color(0xFFF7931A),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_selectedCoin!.symbol,
+                                style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                )),
+                              Text(_selectedCoin!.name,
+                                style: const TextStyle(
+                                  fontSize: 10, color: AppColors.textMuted,
+                                )),
+                            ],
+                          ),
+                        ),
+                        Text(_selectedCoin!.formattedPrice,
+                          style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600,
+                            color: Colors.white, fontFamily: 'JetBrainsMono',
+                          )),
+                        const SizedBox(width: 8),
+                        const Text('Change', style: TextStyle(
+                          fontSize: 10, color: AppColors.brandGreen,
+                        )),
+                      ] else ...[
+                        const Icon(Icons.search_rounded,
+                          size: 16, color: AppColors.textMuted),
+                        const SizedBox(width: 10),
+                        const Text('Search coin (BTC, ETH, SOL...)',
+                          style: TextStyle(
+                            fontSize: 13, color: AppColors.textDisabled,
+                          )),
+                      ],
+                    ],
+                  ),
+                ),
               ),
+              if (_selectedCoin == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 4),
+                  child: Text(
+                    _symbol.text.isEmpty ? '' : '',
+                    style: const TextStyle(fontSize: 10, color: AppColors.brandRed),
+                  ),
+                ),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -1190,6 +1291,189 @@ class _AddPositionSheetState extends State<_AddPositionSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Coin Picker Sheet ───────────────────────────────────────────────────────────
+
+class _CoinPickerSheet extends ConsumerStatefulWidget {
+  final ValueChanged<MarketCoin> onSelected;
+  const _CoinPickerSheet({required this.onSelected});
+
+  @override
+  ConsumerState<_CoinPickerSheet> createState() => _CoinPickerSheetState();
+}
+
+class _CoinPickerSheetState extends ConsumerState<_CoinPickerSheet> {
+  final _ctrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coinsAsync = ref.watch(coinSearchProvider(_query));
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(
+        children: [
+          // handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 12),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.borderDefault,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.bgTertiary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, size: 16, color: AppColors.textMuted),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _ctrl,
+                      autofocus: true,
+                      style: const TextStyle(fontSize: 13, color: Colors.white),
+                      onChanged: (v) => setState(() => _query = v.trim()),
+                      decoration: const InputDecoration(
+                        hintText: 'Search coin by name or symbol...',
+                        hintStyle: TextStyle(color: AppColors.textDisabled, fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  if (_query.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _ctrl.clear();
+                        setState(() => _query = '');
+                      },
+                      child: const Icon(Icons.close_rounded, size: 16, color: AppColors.textMuted),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(color: AppColors.borderSubtle, height: 1),
+          // coin list
+          Expanded(
+            child: coinsAsync.when(
+              loading: () => const Center(
+                child: SizedBox(width: 22, height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandGreen)),
+              ),
+              error: (_, __) => const Center(
+                child: Text('Failed to load coins',
+                  style: TextStyle(color: AppColors.brandRed, fontSize: 13)),
+              ),
+              data: (coins) {
+                if (coins.isEmpty) {
+                  return const Center(
+                    child: Text('No coins found',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  );
+                }
+                return ListView.builder(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: coins.length,
+                  itemBuilder: (_, i) {
+                    final coin = coins[i];
+                    final change = coin.priceChange24h;
+                    final positive = change >= 0;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        widget.onSelected(coin);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                        color: Colors.transparent,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandGreen.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  coin.symbol[0],
+                                  style: const TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w800,
+                                    color: AppColors.brandGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(coin.symbol,
+                                    style: const TextStyle(
+                                      fontSize: 13, fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    )),
+                                  Text(coin.name,
+                                    style: const TextStyle(
+                                      fontSize: 10, color: AppColors.textMuted,
+                                    )),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(coin.formattedPrice,
+                                  style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600,
+                                    color: Colors.white, fontFamily: 'JetBrainsMono',
+                                  )),
+                                Text(
+                                  '${positive ? '+' : ''}${change.toStringAsFixed(2)}%',
+                                  style: TextStyle(
+                                    fontSize: 10, fontWeight: FontWeight.w600,
+                                    color: positive ? AppColors.brandGreen : AppColors.brandRed,
+                                    fontFamily: 'JetBrainsMono',
+                                  )),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
