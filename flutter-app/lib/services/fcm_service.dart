@@ -11,8 +11,8 @@ class FcmService {
   static const String _vapidKey =
       'BCJtfujppseHuv0YNjtyujhXYVTyT4UVATgT9m1SBuR4wk2Ka3kx_duFzWdFoaK2h0_cnAyk3zHUPT7w9ZS3KmQ';
 
-  // Holds the last known FCM token so we can retry registration after login
   static String? _lastToken;
+  static bool _registered = false;
 
   static Future<void> init() async {
     try {
@@ -32,32 +32,18 @@ class FcmService {
       final token = await messaging.getToken(vapidKey: _vapidKey);
       if (token != null) {
         _lastToken = token;
-
         log('[FCM] Token: $token');
-        await _register(token);
       }
 
       messaging.onTokenRefresh.listen((newToken) {
-        log('[FCM] Token refreshed');
         _lastToken = newToken;
-        _register(newToken);
+        if (_registered) _register(newToken);
       });
 
       FirebaseMessaging.onMessage.listen((message) {
         log('[FCM] Foreground message: ${message.notification?.title}');
         final n = message.notification;
-        if (n != null) {
-          js.JsObject(
-            js.context['Notification'] as js.JsFunction,
-            [
-              n.title ?? 'CoinPilot',
-              js.JsObject.jsify({
-                'body': n.body ?? '',
-                'icon': '/icons/Icon-192.png',
-              }),
-            ],
-          );
-        }
+        if (n != null) _showNotification(n.title ?? 'CoinPilot', n.body ?? '');
       });
     } catch (e) {
       log('[FCM] Init error: $e');
@@ -67,6 +53,7 @@ class FcmService {
   /// Call this after login / auth state confirmed — retries storing the FCM
   /// token if the initial registration failed (e.g. 401 during signup flow).
   static Future<void> retryRegistration() async {
+    if (_registered) return;
     try {
       final token = _lastToken ??
           await FirebaseMessaging.instance.getToken(vapidKey: _vapidKey);
@@ -79,6 +66,39 @@ class FcmService {
     }
   }
 
+  static void resetRegistration() {
+    _registered = false;
+  }
+
+  static void _showNotification(String title, String body) {
+    try {
+      final opts = js.JsObject.jsify({
+        'body': body,
+        'icon': '/icons/Icon-192.png',
+      });
+
+      // Use service worker showNotification — works on mobile web & desktop
+      final sw = js.context['navigator']['serviceWorker'] as js.JsObject?;
+      final ready = sw?['ready'];
+      if (ready != null) {
+        (ready as js.JsObject).callMethod('then', [
+          js.JsFunction.withThis((thisArg, reg) {
+            try {
+              (reg as js.JsObject).callMethod('showNotification', [title, opts]);
+            } catch (_) {}
+          }),
+        ]);
+        return;
+      }
+
+      // Fallback: direct Notification constructor (desktop only)
+      js.JsObject(
+        js.context['Notification'] as js.JsFunction,
+        [title, opts],
+      );
+    } catch (_) {}
+  }
+
   static Future<void> _register(String token) async {
     try {
       await ApiClient.instance.put(
@@ -86,8 +106,7 @@ class FcmService {
         data: {'token': token},
       );
       log('[FCM] Token registered with backend');
-    } catch (e) {
-      log('[FCM] Token registration skipped: $e');
-    }
+      _registered = true;
+    } catch (_) {}
   }
 }
