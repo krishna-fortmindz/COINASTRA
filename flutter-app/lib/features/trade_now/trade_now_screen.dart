@@ -1374,6 +1374,9 @@ class _SetAlertButtonState extends ConsumerState<_SetAlertButton>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(authNotifierProvider.notifier).refresh();
+    });
   }
 
   @override

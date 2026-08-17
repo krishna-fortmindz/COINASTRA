@@ -6,10 +6,11 @@ import '../core/end_points.dart';
 class FcmService {
   FcmService._();
 
-  // Get this from: Firebase Console → Project Settings →
-  // Cloud Messaging → Web configuration → Generate key pair
   static const String _vapidKey =
       'BCJtfujppseHuv0YNjtyujhXYVTyT4UVATgT9m1SBuR4wk2Ka3kx_duFzWdFoaK2h0_cnAyk3zHUPT7w9ZS3KmQ';
+
+  // Holds the last known FCM token so we can retry registration after login
+  static String? _lastToken;
 
   static Future<void> init() async {
     try {
@@ -28,21 +29,37 @@ class FcmService {
 
       final token = await messaging.getToken(vapidKey: _vapidKey);
       if (token != null) {
+        _lastToken = token;
         log('[FCM] Token obtained, registering with backend');
         await _register(token);
       }
 
       messaging.onTokenRefresh.listen((newToken) {
         log('[FCM] Token refreshed');
+        _lastToken = newToken;
         _register(newToken);
       });
 
-      // Foreground message handler — shown as in-app overlay by the UI layer
       FirebaseMessaging.onMessage.listen((message) {
         log('[FCM] Foreground message: ${message.notification?.title}');
       });
     } catch (e) {
       log('[FCM] Init error: $e');
+    }
+  }
+
+  /// Call this after login / auth state confirmed — retries storing the FCM
+  /// token if the initial registration failed (e.g. 401 during signup flow).
+  static Future<void> retryRegistration() async {
+    try {
+      final token = _lastToken ??
+          await FirebaseMessaging.instance.getToken(vapidKey: _vapidKey);
+      if (token != null) {
+        _lastToken = token;
+        await _register(token);
+      }
+    } catch (e) {
+      log('[FCM] Retry registration error: $e');
     }
   }
 
@@ -54,7 +71,6 @@ class FcmService {
       );
       log('[FCM] Token registered with backend');
     } catch (e) {
-      // Silently fail if user is not logged in (401) — re-registers on next app open after login
       log('[FCM] Token registration skipped: $e');
     }
   }

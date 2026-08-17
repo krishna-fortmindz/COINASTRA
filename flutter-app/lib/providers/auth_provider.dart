@@ -1,6 +1,7 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:ai_trading_copilot/services/fcm_service.dart';
 import 'package:ai_trading_copilot/services/pref_keys.dart';
 import 'package:ai_trading_copilot/services/shared_pref_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,23 +33,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void _checkAuth() {
-    final token = html.window.localStorage['coinastra_access'];
-    if (token == null || token.isEmpty) {
-      state = const AuthState(isLoggedIn: false);
-      return;
-    }
-    // Sync Next.js-stored token into SharedPreferences so Flutter's API client can read it
-    _syncTokenToPrefs(token);
+    try {
+      final token = html.window.localStorage['coinastra_access'];
+      if (token == null || token.isEmpty) {
+        state = const AuthState(isLoggedIn: false);
+        return;
+      }
+      // Sync Next.js-stored token into SharedPreferences so Flutter's API client can read it
+      _syncTokenToPrefs(token);
 
-    AuthUser? user;
-    final userJson = html.window.localStorage['coinastra_user'];
-    if (userJson != null) {
-      try {
-        user = AuthUser.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
-        _syncUserIdToPrefs(user);
-      } catch (_) {}
+      AuthUser? user;
+      final userJson = html.window.localStorage['coinastra_user'];
+      if (userJson != null) {
+        try {
+          user = AuthUser.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
+          _syncUserIdToPrefs(user);
+        } catch (_) {}
+      }
+      state = AuthState(isLoggedIn: true, user: user);
+      // Ensure FCM token is registered — retries silently if it failed during signup
+      FcmService.retryRegistration();
+    } catch (_) {
+      state = const AuthState(isLoggedIn: false);
     }
-    state = AuthState(isLoggedIn: true, user: user);
   }
 
   void _syncTokenToPrefs(String token) {
@@ -64,6 +71,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       SharedPreferenceService.setValue(PrefKeys.userId, user.id).catchError((_) {});
     }
   }
+
+  void refresh() => _checkAuth();
 
   void logout() {
     html.window.localStorage.remove('coinastra_access');
