@@ -1,6 +1,7 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:ai_trading_copilot/services/fcm_service.dart';
 import 'package:ai_trading_copilot/services/pref_keys.dart';
 import 'package:ai_trading_copilot/services/shared_pref_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +51,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         } catch (_) {}
       }
       state = AuthState(isLoggedIn: true, user: user);
+      // Ensure FCM token is registered — retries silently if it failed during signup
+      FcmService.retryRegistration();
     } catch (_) {
       state = const AuthState(isLoggedIn: false);
     }

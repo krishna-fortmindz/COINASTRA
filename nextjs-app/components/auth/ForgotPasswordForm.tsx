@@ -21,8 +21,10 @@ export default function ForgotPasswordForm() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data?.message ?? "Failed to send reset code. Please try again.");
+      // Backend may return HTTP 200 with success:false for unknown emails
+      const bodyOk = data?.success !== false && data?.status !== "error" && data?.status !== "fail";
+      if (!res.ok || !bodyOk) {
+        setError(data?.message ?? "No account found with that email address.");
         setLoading(false);
         return;
       }
