@@ -108,7 +108,7 @@ class _OrderbookScreenState extends ConsumerState<OrderbookScreen> {
     return CoinSelector(
       selected: _selectedCoin,
       onChanged: (c) {
-        ref.read(selectedCoinProvider.notifier).state = c;
+        ref.read(selectedCoinProvider.notifier).set(c);
         ref.read(aiAnalysisProvider).selectCoin(c);
         ref.read(chartsProvider).setCoin(c);
         ref.read(orderBookProvider.notifier).selectCoin(c);
