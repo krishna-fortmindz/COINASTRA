@@ -80,6 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     html.window.localStorage.remove('coinastra_user');
     SharedPreferenceService.setValue(PrefKeys.accessToken, '').catchError((_) {});
     SharedPreferenceService.setValue(PrefKeys.refreshToken, '').catchError((_) {});
+    FcmService.resetRegistration();
     state = const AuthState(isLoggedIn: false);
     html.window.location.assign('/auth/login');
   }
