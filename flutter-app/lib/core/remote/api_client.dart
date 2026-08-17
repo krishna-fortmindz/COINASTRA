@@ -275,6 +275,24 @@ class ApiClient {
     }
   }
 
+  // ───────────────── PUT ─────────────────
+
+  Future<Response<T>> put<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParams,
+  }) async {
+    try {
+      return await dio.put<T>(
+        path,
+        data: data,
+        queryParameters: queryParams,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   // ───────────────── PATCH ─────────────────
 
   Future<Response<T>> patch<T>(

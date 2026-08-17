@@ -15,7 +15,7 @@ const nextConfig = {
   },
 
   async rewrites() {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.FLUTTER_PROXY === "true") {
       return [
         { source: "/app/:path*", destination: "http://localhost:5001/:path*" },
         { source: "/dashboard/:path*", destination: "http://localhost:5001/dashboard/:path*" },
