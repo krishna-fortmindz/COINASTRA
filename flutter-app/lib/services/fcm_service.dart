@@ -1,4 +1,6 @@
 import 'dart:developer';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/remote/api_client.dart';
 import '../core/end_points.dart';
@@ -30,7 +32,8 @@ class FcmService {
       final token = await messaging.getToken(vapidKey: _vapidKey);
       if (token != null) {
         _lastToken = token;
-        log('[FCM] Token obtained, registering with backend');
+
+        log('[FCM] Token: $token');
         await _register(token);
       }
 
@@ -42,6 +45,19 @@ class FcmService {
 
       FirebaseMessaging.onMessage.listen((message) {
         log('[FCM] Foreground message: ${message.notification?.title}');
+        final n = message.notification;
+        if (n != null) {
+          js.JsObject(
+            js.context['Notification'] as js.JsFunction,
+            [
+              n.title ?? 'CoinPilot',
+              js.JsObject.jsify({
+                'body': n.body ?? '',
+                'icon': '/icons/Icon-192.png',
+              }),
+            ],
+          );
+        }
       });
     } catch (e) {
       log('[FCM] Init error: $e');

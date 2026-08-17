@@ -510,36 +510,100 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   }
 
   Widget _buildChartCard(String chartUrl) {
+    final image = Image.network(
+      chartUrl,
+      fit: BoxFit.contain,
+      width: double.infinity,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          height: 200,
+          color: AppColors.bgCard,
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
+                    : null,
+                color: AppColors.brandGreen,
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+
     return GlassCard(
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          chartUrl,
-          fit: BoxFit.contain,
-          width: double.infinity,
-          loadingBuilder: (_, child, progress) {
-            if (progress == null) return child;
-            return Container(
-              height: 200,
-              color: AppColors.bgCard,
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                            progress.expectedTotalBytes!
-                        : null,
-                    color: AppColors.brandGreen,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: image,
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: () => _showFullscreenChart(context, chartUrl),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(6),
                   ),
+                  padding: const EdgeInsets.all(5),
+                  child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
                 ),
               ),
-            );
-          },
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullscreenChart(BuildContext context, String chartUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 8,
+              child: Image.network(
+                chartUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

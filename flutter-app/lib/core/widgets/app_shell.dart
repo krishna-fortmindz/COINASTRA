@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import 'feedback_widget.dart';
 import 'sidebar.dart';
@@ -149,7 +151,7 @@ class _NavItem {
   _NavItem(this.route, this.icon, this.label);
 }
 
-class _MoreSheet extends StatelessWidget {
+class _MoreSheet extends ConsumerWidget {
   final String currentRoute;
   const _MoreSheet({required this.currentRoute});
 
@@ -179,7 +181,9 @@ class _MoreSheet extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoggedIn = ref.watch(authProvider);
+
     return Container(
       margin: const EdgeInsets.only(top: 60),
       decoration: const BoxDecoration(
@@ -200,65 +204,128 @@ class _MoreSheet extends StatelessWidget {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _sections.map((section) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                      child: Text(section.label, style: const TextStyle(
-                        fontSize: 9, fontWeight: FontWeight.w700,
-                        color: AppColors.textDisabled, letterSpacing: 1.2,
-                      )),
-                    ),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 1.5,
-                      children: section.entries.map((e) {
-                        final active = currentRoute == e.route;
-                        return GestureDetector(
-                          onTap: () => Router.neglect(context, () {
-                            Navigator.of(context).pop();
-                            context.go(e.route);
-                          }),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? e.color.withAlpha(20)
-                                  : AppColors.bgCard,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                children: [
+                  ..._sections.map((section) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                        child: Text(section.label, style: const TextStyle(
+                          fontSize: 9, fontWeight: FontWeight.w700,
+                          color: AppColors.textDisabled, letterSpacing: 1.2,
+                        )),
+                      ),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1.5,
+                        children: section.entries.map((e) {
+                          final active = currentRoute == e.route;
+                          return GestureDetector(
+                            onTap: () => Router.neglect(context, () {
+                              Navigator.of(context).pop();
+                              context.go(e.route);
+                            }),
+                            child: Container(
+                              decoration: BoxDecoration(
                                 color: active
-                                    ? e.color.withAlpha(50)
-                                    : AppColors.borderSubtle,
+                                    ? e.color.withAlpha(20)
+                                    : AppColors.bgCard,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: active
+                                      ? e.color.withAlpha(50)
+                                      : AppColors.borderSubtle,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(e.icon, size: 20,
+                                    color: active ? e.color : AppColors.textMuted),
+                                  const SizedBox(height: 6),
+                                  Text(e.label, textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 10, fontWeight: FontWeight.w500,
+                                      color: active ? Colors.white : AppColors.textMuted,
+                                    )),
+                                ],
                               ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(e.icon, size: 20,
-                                  color: active ? e.color : AppColors.textMuted),
-                                const SizedBox(height: 6),
-                                Text(e.label, textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 10, fontWeight: FontWeight.w500,
-                                    color: active ? Colors.white : AppColors.textMuted,
-                                  )),
-                              ],
-                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  )),
+                  const SizedBox(height: 12),
+                  // Sign Out / Sign In button
+                  if (isLoggedIn)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        ref.read(authNotifierProvider.notifier).logout();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF3366).withAlpha(15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFFF3366).withAlpha(40),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.logout_rounded, size: 16, color: Color(0xFFFF3366)),
+                            SizedBox(width: 8),
+                            Text('Sign Out', style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600,
+                              color: Color(0xFFFF3366),
+                            )),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/auth/login');
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandGreen.withAlpha(15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.brandGreen.withAlpha(40),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.login_rounded, size: 16, color: AppColors.brandGreen),
+                            SizedBox(width: 8),
+                            Text('Sign In', style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600,
+                              color: AppColors.brandGreen,
+                            )),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                  ],
-                )).toList(),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           ),
