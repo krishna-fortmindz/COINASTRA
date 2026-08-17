@@ -39,6 +39,15 @@ class SignalData {
   // Raw metrics from the signal response — used as fallback for cards whose
   // separate endpoints fail (long/short, liquidation wall, etc.)
   final Map<String, dynamic> rawMetrics;
+  // Extended signal fields
+  final String chartUrl;
+  final String marketRegime;
+  final IndicatorsData indicators;
+  final AiInsightData aiInsight;
+  final LeverageData leverage;
+  final KeyLevelsData keyLevels;
+  final int setupScoreLong;
+  final int setupScoreShort;
 
   const SignalData({
     required this.price,
@@ -53,6 +62,14 @@ class SignalData {
     this.futuresAvailable = true,
     this.coinNotSupported = false,
     this.rawMetrics = const {},
+    this.chartUrl = '',
+    this.marketRegime = '',
+    this.indicators = IndicatorsData.empty,
+    this.aiInsight = AiInsightData.empty,
+    this.leverage = LeverageData.empty,
+    this.keyLevels = KeyLevelsData.empty,
+    this.setupScoreLong = 0,
+    this.setupScoreShort = 0,
   });
 
   String get verdictIcon {
@@ -115,6 +132,8 @@ class SignalData {
       reasoningStr = reasoningRaw?.toString() ?? json['analysis']?.toString() ?? '';
     }
     final metrics = json['metrics'] as Map<String, dynamic>? ?? {};
+    final setupScore = metrics['setupScore'] as Map<String, dynamic>? ?? {};
+    final keyLevelsRaw = levels['keyLevels'] as Map<String, dynamic>? ?? {};
     return SignalData(
       price: (json['currentPrice'] ?? json['price'] as num?)?.toDouble() ?? 0,
       verdictLabel: label,
@@ -130,8 +149,26 @@ class SignalData {
       coinNotSupported: json['coin_not_supported'] as bool? ??
           json['coinNotSupported'] as bool? ?? false,
       rawMetrics: metrics,
+      chartUrl: json['chartUrl']?.toString() ?? '',
+      marketRegime: json['marketRegime']?.toString() ?? '',
+      indicators: json['indicators'] != null
+          ? IndicatorsData.fromJson(json['indicators'] as Map<String, dynamic>)
+          : IndicatorsData.empty,
+      aiInsight: json['aiInsight'] != null
+          ? AiInsightData.fromJson(json['aiInsight'] as Map<String, dynamic>)
+          : AiInsightData.empty,
+      leverage: json['leverage'] != null
+          ? LeverageData.fromJson(json['leverage'] as Map<String, dynamic>)
+          : LeverageData.empty,
+      keyLevels: keyLevelsRaw.isNotEmpty
+          ? KeyLevelsData.fromJson(keyLevelsRaw)
+          : KeyLevelsData.empty,
+      setupScoreLong: (setupScore['long'] as num?)?.toInt() ?? 0,
+      setupScoreShort: (setupScore['short'] as num?)?.toInt() ?? 0,
     );
   }
+
+  static String formatPriceStatic(dynamic v) => _formatPrice(v);
 
   static String _formatPrice(dynamic v) {
     if (v == null) return '—';
@@ -296,6 +333,136 @@ class LiquidationData {
   }
 
   static const empty = LiquidationData(wallPrice: 0, side: 'Below');
+}
+
+// ── Indicators ────────────────────────────────────────────────────────────────
+
+class IndicatorsData {
+  final double rsi;
+  final double macdHistogram;
+  final String? macdCrossover;
+  final double bbUpper, bbMiddle, bbLower, bbPercentB;
+
+  const IndicatorsData({
+    required this.rsi,
+    required this.macdHistogram,
+    this.macdCrossover,
+    required this.bbUpper,
+    required this.bbMiddle,
+    required this.bbLower,
+    required this.bbPercentB,
+  });
+
+  String get rsiLabel {
+    if (rsi >= 70) return 'Overbought';
+    if (rsi <= 30) return 'Oversold';
+    if (rsi >= 60) return 'Bullish';
+    if (rsi <= 40) return 'Bearish';
+    return 'Neutral';
+  }
+
+  String get macdLabel =>
+      macdHistogram > 0.000001 ? 'Bullish' : macdHistogram < -0.000001 ? 'Bearish' : 'Flat';
+
+  factory IndicatorsData.fromJson(Map<String, dynamic> json) {
+    final bb = json['bollingerBands'] as Map<String, dynamic>? ?? {};
+    final macd = json['macd'] as Map<String, dynamic>? ?? {};
+    return IndicatorsData(
+      rsi: (json['rsi'] as num?)?.toDouble() ?? 50,
+      macdHistogram: (macd['histogram'] as num?)?.toDouble() ?? 0,
+      macdCrossover: macd['crossover'] as String?,
+      bbUpper: (bb['upper'] as num?)?.toDouble() ?? 0,
+      bbMiddle: (bb['middle'] as num?)?.toDouble() ?? 0,
+      bbLower: (bb['lower'] as num?)?.toDouble() ?? 0,
+      bbPercentB: (bb['percentB'] as num?)?.toDouble() ?? 50,
+    );
+  }
+
+  static const empty = IndicatorsData(
+    rsi: 50, macdHistogram: 0, bbUpper: 0, bbMiddle: 0, bbLower: 0, bbPercentB: 50,
+  );
+}
+
+// ── AI Insight ────────────────────────────────────────────────────────────────
+
+class AiInsightData {
+  final String primaryReason;
+  final String secondaryReason;
+  final String nearTermOutlook;
+  final String levelExplanation;
+  final String fundamentalContext;
+  final String riskLevel;
+
+  const AiInsightData({
+    required this.primaryReason,
+    required this.secondaryReason,
+    required this.nearTermOutlook,
+    required this.levelExplanation,
+    required this.fundamentalContext,
+    required this.riskLevel,
+  });
+
+  factory AiInsightData.fromJson(Map<String, dynamic> json) => AiInsightData(
+    primaryReason: json['primaryReason']?.toString() ?? '',
+    secondaryReason: json['secondaryReason']?.toString() ?? '',
+    nearTermOutlook: json['nearTermOutlook']?.toString() ?? '',
+    levelExplanation: json['levelExplanation']?.toString() ?? '',
+    fundamentalContext: json['fundamentalContext']?.toString() ?? '',
+    riskLevel: json['riskLevel']?.toString() ?? 'medium',
+  );
+
+  static const empty = AiInsightData(
+    primaryReason: '', secondaryReason: '', nearTermOutlook: '',
+    levelExplanation: '', fundamentalContext: '', riskLevel: 'medium',
+  );
+}
+
+// ── Leverage ─────────────────────────────────────────────────────────────────
+
+class LeverageData {
+  final String mode;
+  final int suggestedLeverage;
+  final String note;
+
+  const LeverageData({required this.mode, required this.suggestedLeverage, required this.note});
+
+  factory LeverageData.fromJson(Map<String, dynamic> json) => LeverageData(
+    mode: json['mode']?.toString() ?? 'no_trade',
+    suggestedLeverage: (json['suggestedLeverage'] as num?)?.toInt() ?? 0,
+    note: json['note']?.toString() ?? '',
+  );
+
+  static const empty = LeverageData(mode: 'no_trade', suggestedLeverage: 0, note: '');
+}
+
+// ── Key Levels ────────────────────────────────────────────────────────────────
+
+class KeyLevelsData {
+  final double nearestSupport;
+  final double nearestResistance;
+  final double fib382;
+  final double fib50;
+  final double fib618;
+
+  const KeyLevelsData({
+    required this.nearestSupport,
+    required this.nearestResistance,
+    required this.fib382,
+    required this.fib50,
+    required this.fib618,
+  });
+
+  factory KeyLevelsData.fromJson(Map<String, dynamic> json) => KeyLevelsData(
+    nearestSupport: (json['nearestSupport'] as num?)?.toDouble() ?? 0,
+    nearestResistance: (json['nearestResistance'] as num?)?.toDouble() ?? 0,
+    fib382: (json['fib382'] as num?)?.toDouble() ?? 0,
+    fib50: (json['fib50'] as num?)?.toDouble() ?? 0,
+    fib618: (json['fib618'] as num?)?.toDouble() ?? 0,
+  );
+
+  static const empty = KeyLevelsData(
+    nearestSupport: 0, nearestResistance: 0, fib382: 0, fib50: 0, fib618: 0,
+  );
 }
 
 // ── Funding Rate (trade-now specific) ────────────────────────────────────────

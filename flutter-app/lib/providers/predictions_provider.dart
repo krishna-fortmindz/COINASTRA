@@ -25,11 +25,99 @@ final _repo = PredictionsRepoImpl();
 
 // ── Leaderboard ────────────────────────────────────────────────────────────────
 
-// Family param is the timeframe string: '7d' | '30d' | '90d' | 'all'
+class LeaderboardState {
+  final int page;
+  final int limit;
+  final String timeframe;
+  final AsyncValue<LeaderboardPage> data;
+
+  const LeaderboardState({
+    required this.page,
+    required this.limit,
+    required this.timeframe,
+    required this.data,
+  });
+
+  LeaderboardState copyWith({
+    int? page,
+    int? limit,
+    String? timeframe,
+    AsyncValue<LeaderboardPage>? data,
+  }) =>
+      LeaderboardState(
+        page: page ?? this.page,
+        limit: limit ?? this.limit,
+        timeframe: timeframe ?? this.timeframe,
+        data: data ?? this.data,
+      );
+}
+
+class LeaderboardNotifier extends Notifier<LeaderboardState> {
+  @override
+  LeaderboardState build() {
+    const s = LeaderboardState(
+      page: 1,
+      limit: 10,
+      timeframe: '30d',
+      data: AsyncValue.loading(),
+    );
+    _fetch(s);
+    return s;
+  }
+
+  Future<void> _fetch(LeaderboardState s) async {
+    try {
+      final page = await _repo.fetchLeaderboard(
+        timeframe: s.timeframe,
+        page: s.page,
+        limit: s.limit,
+      );
+      state = state.copyWith(data: AsyncValue.data(page));
+    } catch (e, st) {
+      state = state.copyWith(data: AsyncValue.error(e, st));
+    }
+  }
+
+  void setTimeframe(String timeframe) {
+    final next = state.copyWith(
+      timeframe: timeframe,
+      page: 1,
+      data: const AsyncValue.loading(),
+    );
+    state = next;
+    _fetch(next);
+  }
+
+  void nextPage() {
+    final current = state.data.valueOrNull;
+    if (current == null || !current.hasNext) return;
+    final next = state.copyWith(
+      page: state.page + 1,
+      data: const AsyncValue.loading(),
+    );
+    state = next;
+    _fetch(next);
+  }
+
+  void prevPage() {
+    if (state.page <= 1) return;
+    final next = state.copyWith(
+      page: state.page - 1,
+      data: const AsyncValue.loading(),
+    );
+    state = next;
+    _fetch(next);
+  }
+
+  void refresh() {
+    final next = state.copyWith(data: const AsyncValue.loading());
+    state = next;
+    _fetch(next);
+  }
+}
+
 final leaderboardProvider =
-    FutureProvider.autoDispose.family<List<LeaderboardEntry>, String>((ref, timeframe) async {
-  return _repo.fetchLeaderboard(timeframe: timeframe);
-});
+    NotifierProvider<LeaderboardNotifier, LeaderboardState>(LeaderboardNotifier.new);
 
 // ── Coin Accuracy (per coin) ───────────────────────────────────────────────────
 

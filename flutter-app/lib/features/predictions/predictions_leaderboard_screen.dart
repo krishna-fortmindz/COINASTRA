@@ -17,7 +17,6 @@ class PredictionsLeaderboardScreen extends ConsumerStatefulWidget {
 
 class _PredictionsLeaderboardScreenState
     extends ConsumerState<PredictionsLeaderboardScreen> {
-  String _timeframe = '30d';
   static const _timeframes = ['7d', '30d', '90d', 'all'];
 
   void _showMakePrediction() {
@@ -92,7 +91,7 @@ class _PredictionsLeaderboardScreenState
   @override
   Widget build(BuildContext context) {
     final loggedIn = ref.watch(authProvider);
-    final leaderboardAsync = ref.watch(leaderboardProvider(_timeframe));
+    final leaderboardState = ref.watch(leaderboardProvider);
     final userState = ref.watch(userPredictionsProvider);
 
     return Scaffold(
@@ -112,7 +111,7 @@ class _PredictionsLeaderboardScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Header(onRefresh: () {
-              ref.invalidate(leaderboardProvider(_timeframe));
+              ref.read(leaderboardProvider.notifier).refresh();
               ref.read(userPredictionsProvider.notifier).refresh();
             }),
             const SizedBox(height: 20),
@@ -134,40 +133,45 @@ class _PredictionsLeaderboardScreenState
                   ),
                 ),
                 const Spacer(),
-                ..._timeframes.map((t) => GestureDetector(
-                      onTap: () => setState(() => _timeframe = t),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: _timeframe == t
-                              ? AppColors.brandGreen.withAlpha(20)
-                              : AppColors.bgCard,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _timeframe == t
-                                ? AppColors.brandGreen
-                                : AppColors.borderSubtle,
-                          ),
-                        ),
-                        child: Text(
-                          t,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _timeframe == t
-                                ? AppColors.brandGreen
-                                : AppColors.textMuted,
-                          ),
+                ..._timeframes.map((t) {
+                  final active = leaderboardState.timeframe == t;
+                  return GestureDetector(
+                    onTap: () => ref
+                        .read(leaderboardProvider.notifier)
+                        .setTimeframe(t),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.brandGreen.withAlpha(20)
+                            : AppColors.bgCard,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.brandGreen
+                              : AppColors.borderSubtle,
                         ),
                       ),
-                    )),
+                      child: Text(
+                        t,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: active
+                              ? AppColors.brandGreen
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
             const SizedBox(height: 12),
-            leaderboardAsync.when(
+            leaderboardState.data.when(
               loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(40),
@@ -176,7 +180,27 @@ class _PredictionsLeaderboardScreenState
                 ),
               ),
               error: (e, _) => _ErrorCard(message: e.toString()),
-              data: (entries) => _LeaderboardBody(entries: entries),
+              data: (page) => Column(
+                children: [
+                  _LeaderboardBody(entries: page.entries),
+                  const SizedBox(height: 12),
+                  _PaginationBar(
+                    page: page.page,
+                    totalPages: page.totalPages,
+                    total: page.total,
+                    onPrev: page.hasPrev
+                        ? () => ref
+                            .read(leaderboardProvider.notifier)
+                            .prevPage()
+                        : null,
+                    onNext: page.hasNext
+                        ? () => ref
+                            .read(leaderboardProvider.notifier)
+                            .nextPage()
+                        : null,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 80),
           ],
@@ -586,6 +610,91 @@ class _CoinInitial extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: AppColors.brandGreen,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final int total;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    this.onPrev,
+    this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _PageButton(
+          icon: Icons.chevron_left_rounded,
+          onTap: onPrev,
+        ),
+        const SizedBox(width: 12),
+        Column(
+          children: [
+            Text(
+              'Page $page${totalPages > 0 ? ' of $totalPages' : ''}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            if (total > 0)
+              Text(
+                '$total coins total',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        _PageButton(
+          icon: Icons.chevron_right_rounded,
+          onTap: onNext,
+        ),
+      ],
+    );
+  }
+}
+
+class _PageButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _PageButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.bgCard : AppColors.bgCard.withAlpha(80),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: enabled ? AppColors.borderDefault : AppColors.borderSubtle,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: enabled ? Colors.white : AppColors.textDisabled,
         ),
       ),
     );

@@ -133,6 +133,27 @@ class LeaderboardEntry {
   }
 }
 
+// ── Leaderboard Page (paginated) ──────────────────────────────────────────────
+
+class LeaderboardPage {
+  final List<LeaderboardEntry> entries;
+  final int page;
+  final int totalPages;
+  final int total;
+  final int limit;
+
+  const LeaderboardPage({
+    required this.entries,
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    required this.limit,
+  });
+
+  bool get hasNext => page < totalPages;
+  bool get hasPrev => page > 1;
+}
+
 // ── Coin Accuracy ─────────────────────────────────────────────────────────────
 
 class CoinAccuracy {

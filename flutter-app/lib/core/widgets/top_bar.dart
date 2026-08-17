@@ -323,7 +323,7 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
   void _goToCoin(String symbol) {
     Navigator.of(context).pop();
     final upper = symbol.toUpperCase();
-    ref.read(selectedCoinProvider.notifier).state = upper;
+    ref.read(selectedCoinProvider.notifier).set(upper);
 
     // Coin-specific screens: stay on current screen, they sync via selectedCoinProvider
     const coinScreens = {'/memory', '/analysis', '/charts', '/orderbook'};

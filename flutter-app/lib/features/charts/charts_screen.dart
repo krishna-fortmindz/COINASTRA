@@ -144,7 +144,7 @@ class _ChartHeader extends ConsumerWidget {
       final isMobile = c.maxWidth < 700;
       final coinSelector = CoinSelector(
         selected: n.selectedCoin,
-        onChanged: (coin) => ref.read(selectedCoinProvider.notifier).state = coin,
+        onChanged: (coin) => ref.read(selectedCoinProvider.notifier).set(coin),
       );
       final priceWidget = livePrice != null
           ? Container(

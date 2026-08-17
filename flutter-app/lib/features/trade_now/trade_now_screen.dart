@@ -58,7 +58,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                   CoinSelector(
                     selected: _selectedCoin,
                     onChanged: (c) =>
-                        ref.read(selectedCoinProvider.notifier).state = c,
+                        ref.read(selectedCoinProvider.notifier).set(c),
                   ),
                   const SizedBox(height: 20),
                   async.when(
@@ -93,8 +93,12 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
           const SizedBox(height: 16),
           _buildLevelsCard(signal),
           const SizedBox(height: 16),
-          _buildReasoningCard(signal),
+          _buildAiInsightCard(signal),
         ] else ...[
+          if (signal.chartUrl.isNotEmpty) ...[
+            _buildChartCard(signal.chartUrl),
+            const SizedBox(height: 16),
+          ],
           LayoutBuilder(builder: (_, c) {
             if (c.maxWidth < 700) {
               return Column(children: [
@@ -113,15 +117,15 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
             );
           }),
           const SizedBox(height: 16),
-          _buildReasoningCard(signal),
+          _buildIndicatorsCard(signal),
+          const SizedBox(height: 16),
+          _buildAiInsightCard(signal),
           if (data.history.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildHistoricalSetups(data.history),
           ],
           const SizedBox(height: 16),
           CoinFundingOiCard(coin: _selectedCoin),
-          // const SizedBox(height: 16),
-          // CoinLiquidationsCard(coin: _selectedCoin),
         ],
       ],
     );
@@ -226,6 +230,13 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
             ? '\$${livePrice.toStringAsFixed(0)}'
             : '\$${livePrice.toStringAsFixed(4)}')
         : s.formattedPrice;
+
+    final regimeColor = s.marketRegime == 'bullish'
+        ? AppColors.brandGreen
+        : s.marketRegime == 'bearish'
+            ? AppColors.brandRed
+            : AppColors.brandAmber;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -233,59 +244,90 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withAlpha(40)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(s.verdictIcon, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(s.displayVerdictLabel,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: color,
-                          )),
-                    ),
-                    if (livePrice != null)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppColors.brandGreen,
-                          shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        Text(s.verdictIcon, style: const TextStyle(fontSize: 20)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(s.displayVerdictLabel,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: color,
+                              )),
                         ),
+                        if (livePrice != null)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.brandGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text('$_selectedCoin/USDT ',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            )),
+                        Text(displayPrice,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: livePrice != null
+                                  ? AppColors.brandGreen
+                                  : Colors.white,
+                              fontFamily: 'JetBrainsMono',
+                            )),
+                      ],
+                    ),
+                    if (s.marketRegime.isNotEmpty || s.setupScoreLong > 0) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (s.marketRegime.isNotEmpty)
+                            _SmallBadge(
+                              label: s.marketRegime.toUpperCase(),
+                              color: regimeColor,
+                            ),
+                          if (s.setupScoreLong > 0 || s.setupScoreShort > 0)
+                            _SmallBadge(
+                              label: 'L ${s.setupScoreLong} / S ${s.setupScoreShort}',
+                              color: AppColors.brandPurple,
+                              icon: Icons.analytics_outlined,
+                            ),
+                          if (s.leverage.suggestedLeverage > 0)
+                            _SmallBadge(
+                              label: '${s.leverage.suggestedLeverage}x',
+                              color: AppColors.brandCyan,
+                              icon: Icons.speed_rounded,
+                            ),
+                        ],
                       ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text('$_selectedCoin/USDT ',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                        )),
-                    Text(displayPrice,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: livePrice != null
-                              ? AppColors.brandGreen
-                              : Colors.white,
-                          fontFamily: 'JetBrainsMono',
-                        )),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              _ConfidenceRing(confidence: s.confidence, color: color),
+            ],
           ),
-          const SizedBox(width: 16),
-          _ConfidenceRing(confidence: s.confidence, color: color),
         ],
       ),
     );
@@ -418,6 +460,27 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
           _LevelRow('Stop Loss', s.stopLoss, AppColors.brandRed),
           const SizedBox(height: 10),
           _LevelRow('Risk/Reward', s.riskReward, AppColors.brandAmber),
+          if (s.keyLevels.nearestSupport > 0) ...[
+            const SizedBox(height: 14),
+            const Divider(color: AppColors.borderSubtle, height: 1),
+            const SizedBox(height: 10),
+            const Text('Key Levels',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5)),
+            const SizedBox(height: 8),
+            _LevelRow('Support', SignalData.formatPriceStatic(s.keyLevels.nearestSupport), AppColors.brandGreen),
+            const SizedBox(height: 8),
+            _LevelRow('Resistance', SignalData.formatPriceStatic(s.keyLevels.nearestResistance), AppColors.brandRed),
+            const SizedBox(height: 8),
+            _LevelRow('Fib 38.2%', SignalData.formatPriceStatic(s.keyLevels.fib382), AppColors.brandPurple),
+            const SizedBox(height: 8),
+            _LevelRow('Fib 50%', SignalData.formatPriceStatic(s.keyLevels.fib50), AppColors.brandPurple),
+            const SizedBox(height: 8),
+            _LevelRow('Fib 61.8%', SignalData.formatPriceStatic(s.keyLevels.fib618), AppColors.brandPurple),
+          ],
           const SizedBox(height: 16),
           const Divider(color: AppColors.borderSubtle, height: 1),
           const SizedBox(height: 12),
@@ -440,45 +503,299 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
     );
   }
 
-  Widget _buildReasoningCard(SignalData s) {
+  Widget _buildChartCard(String chartUrl) {
     return GlassCard(
-      child: Row(
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          chartUrl,
+          fit: BoxFit.contain,
+          width: double.infinity,
+          loadingBuilder: (_, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              height: 200,
+              color: AppColors.bgCard,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    value: progress.expectedTotalBytes != null
+                        ? progress.cumulativeBytesLoaded /
+                            progress.expectedTotalBytes!
+                        : null,
+                    color: AppColors.brandGreen,
+                  ),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndicatorsCard(SignalData s) {
+    final ind = s.indicators;
+    if (ind.rsi == 50 && ind.macdHistogram == 0 && ind.bbPercentB == 50) {
+      return const SizedBox.shrink();
+    }
+
+    final rsiColor = ind.rsi >= 70
+        ? AppColors.brandRed
+        : ind.rsi <= 30
+            ? AppColors.brandGreen
+            : ind.rsi >= 60
+                ? AppColors.brandGreen
+                : ind.rsi <= 40
+                    ? AppColors.brandAmber
+                    : AppColors.textMuted;
+
+    final macdColor = ind.macdHistogram > 0.000001
+        ? AppColors.brandGreen
+        : ind.macdHistogram < -0.000001
+            ? AppColors.brandRed
+            : AppColors.textMuted;
+
+    final bbColor = ind.bbPercentB >= 80
+        ? AppColors.brandRed
+        : ind.bbPercentB <= 20
+            ? AppColors.brandGreen
+            : AppColors.textMuted;
+
+    return GlassCard(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: AppColors.gradientGreen,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.psychology_rounded,
-                color: Colors.black, size: 16),
+          const Text('Technical Indicators',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              )),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _IndicatorItem(
+                  label: 'RSI (14)',
+                  value: ind.rsi.toStringAsFixed(1),
+                  badge: ind.rsiLabel,
+                  color: rsiColor,
+                  barValue: ind.rsi / 100,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _IndicatorItem(
+                  label: 'MACD Hist.',
+                  value: ind.macdHistogram.toStringAsFixed(4),
+                  badge: ind.macdLabel,
+                  color: macdColor,
+                  barValue: ((ind.macdHistogram.clamp(-0.01, 0.01) + 0.01) / 0.02),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _IndicatorItem(
+                  label: 'BB %B',
+                  value: '${ind.bbPercentB.toStringAsFixed(1)}%',
+                  badge: ind.bbPercentB >= 80
+                      ? 'Near Upper'
+                      : ind.bbPercentB <= 20
+                          ? 'Near Lower'
+                          : 'Mid Band',
+                  color: bbColor,
+                  barValue: ind.bbPercentB / 100,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('AI Reasoning',
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiInsightCard(SignalData s) {
+    final insight = s.aiInsight;
+    final hasInsight = insight.primaryReason.isNotEmpty ||
+        insight.nearTermOutlook.isNotEmpty;
+
+    if (!hasInsight) {
+      return GlassCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: AppColors.gradientGreen,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.psychology_rounded,
+                  color: Colors.black, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('AI Reasoning',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.brandGreen,
+                      )),
+                  const SizedBox(height: 6),
+                  Text(
+                      s.reasoning.isEmpty
+                          ? 'No reasoning available.'
+                          : s.reasoning,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                        height: 1.6,
+                      )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final riskColor = insight.riskLevel == 'high'
+        ? AppColors.brandRed
+        : insight.riskLevel == 'medium'
+            ? AppColors.brandAmber
+            : AppColors.brandGreen;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  gradient: AppColors.gradientGreen,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.psychology_rounded,
+                    color: Colors.black, size: 16),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('AI Insight',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppColors.brandGreen,
                     )),
-                const SizedBox(height: 6),
-                Text(
-                    s.reasoning.isEmpty
-                        ? 'No reasoning available.'
-                        : s.reasoning,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                      height: 1.6,
-                    )),
-              ],
-            ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: riskColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: riskColor.withAlpha(50)),
+                ),
+                child: Text(
+                  '${insight.riskLevel.toUpperCase()} RISK',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: riskColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (insight.primaryReason.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _InsightSection(
+              icon: Icons.trending_flat_rounded,
+              label: 'Primary Signal',
+              text: insight.primaryReason,
+              color: AppColors.brandBlue,
+            ),
+          ],
+          if (insight.secondaryReason.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _InsightSection(
+              icon: Icons.bar_chart_rounded,
+              label: 'Technical View',
+              text: insight.secondaryReason,
+              color: AppColors.brandPurple,
+            ),
+          ],
+          if (insight.nearTermOutlook.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _InsightSection(
+              icon: Icons.access_time_rounded,
+              label: 'Near-Term Outlook',
+              text: insight.nearTermOutlook,
+              color: AppColors.brandAmber,
+            ),
+          ],
+          if (insight.fundamentalContext.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _InsightSection(
+              icon: Icons.layers_rounded,
+              label: 'Fundamental Context',
+              text: insight.fundamentalContext,
+              color: AppColors.brandCyan,
+            ),
+          ],
+          if (s.reasoning.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Divider(color: AppColors.borderSubtle, height: 1),
+            const SizedBox(height: 10),
+            const Text('Signal Factors',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5)),
+            const SizedBox(height: 8),
+            ...s.reasoning
+                .split(RegExp(r'\. (?=[A-Z])'))
+                .where((r) => r.trim().isNotEmpty)
+                .map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('·  ',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textDisabled,
+                                  height: 1.6)),
+                          Expanded(
+                            child: Text(
+                              r.trim().endsWith('.')
+                                  ? r.trim()
+                                  : '${r.trim()}.',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                                height: 1.6,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+          ],
         ],
       ),
     );
@@ -843,6 +1160,147 @@ class _SentimentBar extends StatelessWidget {
               minHeight: 8,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  const _SmallBadge({required this.label, required this.color, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: color.withAlpha(45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 9, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: 0.3,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _IndicatorItem extends StatelessWidget {
+  final String label, value, badge;
+  final Color color;
+  final double barValue;
+  const _IndicatorItem({
+    required this.label,
+    required this.value,
+    required this.badge,
+    required this.color,
+    required this.barValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+        const SizedBox(height: 5),
+        Text(value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              fontFamily: 'JetBrainsMono',
+            )),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: barValue.clamp(0.0, 1.0),
+            backgroundColor: AppColors.borderSubtle,
+            valueColor: AlwaysStoppedAnimation(color),
+            minHeight: 4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withAlpha(15),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(badge,
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: 0.3,
+              )),
+        ),
+      ],
+    );
+  }
+}
+
+class _InsightSection extends StatelessWidget {
+  final IconData icon;
+  final String label, text;
+  final Color color;
+  const _InsightSection({
+    required this.icon,
+    required this.label,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withAlpha(8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 11, color: color),
+              const SizedBox(width: 5),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    letterSpacing: 0.3,
+                  )),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(text,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textMuted,
+                height: 1.55,
+              )),
         ],
       ),
     );

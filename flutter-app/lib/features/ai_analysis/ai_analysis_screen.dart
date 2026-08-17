@@ -123,7 +123,7 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
                         coins: _coins,
                         accuracyAsync: accuracyAsync,
                         onCoinChanged: (c) {
-                          ref.read(selectedCoinProvider.notifier).state = c;
+                          ref.read(selectedCoinProvider.notifier).set(c);
                           ref.read(aiAnalysisProvider).selectCoin(c);
                           ref.read(chartsProvider).setCoin(c);
                           ref
