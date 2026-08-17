@@ -3,11 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, Zap, ExternalLink } from "lucide-react";
 
-const FLUTTER_BASE =
-  process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
 const DASHBOARD_URL = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
   ? "/app/"
-  : `${FLUTTER_BASE}/dashboard`;
+  : "http://localhost:8080/dashboard";
 
 const navLinks = [
   { label: "Features",      href: "/#features"      },

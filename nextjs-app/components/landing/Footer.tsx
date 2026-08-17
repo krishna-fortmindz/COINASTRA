@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Zap, Twitter, Github, MessageCircle } from "lucide-react";
 
-const FLUTTER_BASE =
-  process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
+const FLUTTER_BASE = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
+  ? "/app"
+  : "http://localhost:8080";
 
 const footerLinks = {
   Product: [

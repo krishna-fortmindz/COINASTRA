@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, RefreshCw, Activity } from "lucide-react";
 import type { TickerData } from "@/hooks/useMarketSocket";
 
-const FLUTTER_BASE =
-  process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
-  ? "/app/"
-  : `${FLUTTER_BASE}/dashboard`;
+const FLUTTER_BASE = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
+  ? "/app"
+  : "http://localhost:8080";
+const DASHBOARD_URL = `${FLUTTER_BASE}/`;
 
 interface CoinData {
   id: string;

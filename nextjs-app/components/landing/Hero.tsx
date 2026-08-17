@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Zap, Activity, ExternalLink } from "lucide-react";
 import type { TickerData } from "@/hooks/useMarketSocket";
 
-const FLUTTER_BASE =
-  process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
-const DASHBOARD_URL = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
-  ? "/app/"
-  : `${FLUTTER_BASE}/dashboard`;
+const FLUTTER_BASE = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
+  ? "/app"
+  : "http://localhost:8080";
+const DASHBOARD_URL = `${FLUTTER_BASE}/`;
 
 const COINS = [
   { symbol: "BTC", ws: "BTCUSDT", coinId: "bitcoin",           color: "#f7931a", abbr: "₿"  },
@@ -166,8 +165,8 @@ export default function Hero({
             <span className="gradient-text">Crypto Decisions</span>
           </h1>
           <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-            Real-time AI analysis, live market data, whale alerts and risk management —
-            everything a serious trader needs, in one platform.
+            The best AI crypto trading helper — real-time signals, whale alerts, and
+            market analysis. Core features free, no login required.
           </p>
         </div>
 
@@ -293,9 +292,9 @@ export default function Hero({
 
         {/* Stats */}
         <div className="flex flex-wrap items-center justify-center gap-6 mt-12 text-sm text-white/25">
-          <span className="font-semibold text-white/50">Live data</span>
+          <span className="font-semibold text-white/50">Free · No login required</span>
           <span className="w-1 h-1 rounded-full bg-white/15" />
-          <span>10 coins tracked via socket</span>
+          <span>Live signals via socket</span>
           <span className="w-1 h-1 rounded-full bg-white/15" />
           <span>Binance + CoinGecko</span>
           <span className="w-1 h-1 rounded-full bg-white/15" />

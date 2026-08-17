@@ -13,16 +13,16 @@ import Footer from "@/components/landing/Footer";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.site";
 
 export const metadata: Metadata = {
-  title: "Coinastra — AI-Powered Crypto Trading Intelligence",
+  title: "Coinastra — Best AI Crypto Trading Helper & Signals",
   description:
-    "Real-time AI analysis, live market data, sentiment signals, whale alerts, and risk management for serious crypto traders. Start free today.",
+    "The best AI crypto trading helper — real-time signals, whale alerts, sentiment analysis, and risk management. Core features free, no login required. Start trading smarter today.",
   alternates: { canonical: "/" },
   openGraph: {
     url: APP_URL,
     type: "website",
-    title: "Coinastra — AI-Powered Crypto Trading Intelligence",
+    title: "Coinastra — Best AI Crypto Trading Helper & Signals",
     description:
-      "Real-time AI analysis, live market data, sentiment signals, whale alerts, and risk management for serious crypto traders.",
+      "Best AI trading helper for crypto — live signals, whale alerts, and market analysis free without login. Upgrade anytime for advanced features.",
   },
 };
 
@@ -82,6 +82,22 @@ const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: [
+    {
+      "@type": "Question",
+      name: "Do I need to create an account or log in to use Coinastra?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. Core features — including live market prices, AI market summary, whale alerts, funding rate signals, and fear & greed index — are available without login. Create a free account to unlock the AI Trade Journal, portfolio tracker, personalized alerts, and exchange connections.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What makes Coinastra the best AI crypto trading helper?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Coinastra combines four intelligence layers in one platform: real-time sentiment analysis across Twitter/X, Reddit and on-chain data; a Market Memory Engine that matches current conditions against 10+ years of historical patterns; live whale and funding-rate signals; and a risk calculator that sizes positions before you trade. Most platforms offer one or two of these — Coinastra gives you all of them, free, without signup.",
+      },
+    },
     {
       "@type": "Question",
       name: "Is Coinastra a trading bot that places trades automatically?",
