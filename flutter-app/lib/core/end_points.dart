@@ -25,6 +25,7 @@ class EndPoints {
   // ─────────────────────────────────────────────────────────────
 
   static const String generateNewToken = '$apiBaseUrl/token/generate';
+  static const String fcmToken = '$apiBaseUrl/user/fcm-token';
 
   // ─────────────────────────────────────────────────────────────
   // Dashboard REST APIs
@@ -128,6 +129,8 @@ class EndPoints {
   // ─────────────────────────────────────────────────────────────
   static const String alerts = '$apiBaseUrl/alerts';
   static const String alertsHistory = '$apiBaseUrl/alerts/history';
+  static String alertById(String id) => '$apiBaseUrl/alerts/$id';
+  static String cancelAlert(String id) => '$apiBaseUrl/alerts/$id/cancel';
 
   // ─────────────────────────────────────────────────────────────
   // Trade Journal (NEW — backend to build)

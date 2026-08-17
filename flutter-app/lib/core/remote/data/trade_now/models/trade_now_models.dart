@@ -33,6 +33,8 @@ class SignalData {
   final String takeProfit;
   final String stopLoss;
   final String riskReward;
+  final double rawTakeProfit;
+  final double rawStopLoss;
   final String reasoning;
   final bool futuresAvailable;
   final bool coinNotSupported;
@@ -59,6 +61,8 @@ class SignalData {
     required this.stopLoss,
     required this.riskReward,
     required this.reasoning,
+    this.rawTakeProfit = 0,
+    this.rawStopLoss = 0,
     this.futuresAvailable = true,
     this.coinNotSupported = false,
     this.rawMetrics = const {},
@@ -142,6 +146,8 @@ class SignalData {
       entry: entryStr,
       takeProfit: _formatPrice(levels['takeProfit'] ?? json['takeProfit']),
       stopLoss: _formatPrice(levels['stopLoss'] ?? json['stopLoss']),
+      rawTakeProfit: ((levels['takeProfit'] ?? json['takeProfit']) as num?)?.toDouble() ?? 0,
+      rawStopLoss: ((levels['stopLoss'] ?? json['stopLoss']) as num?)?.toDouble() ?? 0,
       riskReward: levels['riskReward']?.toString() ?? json['riskReward']?.toString() ?? '—',
       reasoning: reasoningStr,
       futuresAvailable: json['futuresAvailable'] as bool? ??

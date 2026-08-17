@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
@@ -6,6 +8,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/coin_selector.dart';
 import '../../core/remote/data/trade_now/models/trade_now_models.dart';
+import '../../core/remote/data/alerts/alerts_repo.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/trade_now_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/selected_coin_provider.dart';
@@ -91,7 +95,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
         if (!signal.futuresAvailable) ...[
           _buildSpotOnlyNotice(),
           const SizedBox(height: 16),
-          _buildLevelsCard(signal),
+          _buildLevelsCard(signal, _selectedCoin),
           const SizedBox(height: 16),
           _buildAiInsightCard(signal),
         ] else ...[
@@ -104,7 +108,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
               return Column(children: [
                 _buildMetricsGrid(data),
                 const SizedBox(height: 16),
-                _buildLevelsCard(signal),
+                _buildLevelsCard(signal, _selectedCoin),
               ]);
             }
             return Row(
@@ -112,7 +116,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
               children: [
                 Expanded(flex: 3, child: _buildMetricsGrid(data)),
                 const SizedBox(width: 16),
-                Expanded(flex: 2, child: _buildLevelsCard(signal)),
+                Expanded(flex: 2, child: _buildLevelsCard(signal, _selectedCoin)),
               ],
             );
           }),
@@ -413,7 +417,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
     );
   }
 
-  Widget _buildLevelsCard(SignalData s) {
+  Widget _buildLevelsCard(SignalData s, String coin) {
     final showNoLevelsNotice =
         s.entry == '—' || s.entry == '\$0–\$0' || s.entry == '\$0.00–\$0.00';
     return GlassCard(
@@ -481,6 +485,8 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
             const SizedBox(height: 8),
             _LevelRow('Fib 61.8%', SignalData.formatPriceStatic(s.keyLevels.fib618), AppColors.brandPurple),
           ],
+          const SizedBox(height: 16),
+          _SetAlertButton(signal: s, coin: coin),
           const SizedBox(height: 16),
           const Divider(color: AppColors.borderSubtle, height: 1),
           const SizedBox(height: 12),
@@ -1332,6 +1338,394 @@ class _LevelRow extends StatelessWidget {
                 color: AppColors.textMuted,
               )),
         ),
+        Text(value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontFamily: 'JetBrainsMono',
+            )),
+      ],
+    );
+  }
+}
+
+// ── Set Alert Button ─────────────────────────────────────────────────────────
+
+class _SetAlertButton extends ConsumerStatefulWidget {
+  final SignalData signal;
+  final String coin;
+
+  const _SetAlertButton({required this.signal, required this.coin});
+
+  @override
+  ConsumerState<_SetAlertButton> createState() => _SetAlertButtonState();
+}
+
+class _SetAlertButtonState extends ConsumerState<_SetAlertButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  bool get _hasLevels =>
+      widget.signal.rawTakeProfit > 0 || widget.signal.rawStopLoss > 0;
+
+  String get _direction {
+    switch (widget.signal.verdictType) {
+      case VerdictType.bearish:
+        return 'short';
+      default:
+        return 'long';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasLevels) return const SizedBox.shrink();
+
+    final isLoggedIn = ref.watch(authProvider);
+
+    if (!isLoggedIn) {
+      return _buildLoginPrompt();
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: AnimatedBuilder(
+        animation: _pulse,
+        builder: (_, child) {
+          final t = _pulse.value;
+          final c1 = Color.lerp(
+              const Color(0xFF00C896), const Color(0xFF00FF9A), t)!;
+          final c2 = Color.lerp(
+              const Color(0xFF00A876), const Color(0xFF00D890), t)!;
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [c1, c2, c1],
+                stops: const [0.0, 0.5, 1.0],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 255, 136, 0.15 + t * 0.35),
+                  blurRadius: 14 + t * 10,
+                  spreadRadius: t * 2,
+                ),
+              ],
+            ),
+            child: child,
+          );
+        },
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _loading ? null : _showConfirmSheet,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: _loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_active_rounded,
+                            size: 18, color: Colors.black),
+                        SizedBox(width: 8),
+                        Text(
+                          'Add Alert · TP / SL',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginPrompt() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: const Color(0xFF00C896).withValues(alpha: 0.4)),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          foregroundColor: const Color(0xFF00C896),
+        ),
+        onPressed: () => _showLoginDialog(),
+        icon: const Icon(Icons.lock_outline_rounded, size: 14),
+        label: const Text(
+          'Sign in to set price alerts',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  void _showLoginDialog() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: const Color(0xFF141519),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF00C896), Color(0xFF00A876)],
+                  ),
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                ),
+                child: const Icon(Icons.lock_open_rounded,
+                    color: Colors.black, size: 26),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Sign In Required',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Create a free account to set TP & SL price alerts and receive push notifications.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00C896),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogCtx);
+                    html.window.location.assign('/auth/login');
+                  },
+                  child: const Text(
+                    'Sign In / Create Account',
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text(
+                  'Maybe Later',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showConfirmSheet() {
+    final s = widget.signal;
+    final coin = widget.coin;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF141519),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(Icons.notifications_active_rounded,
+                    color: Color(0xFF00C896), size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  'Add Alert · TP / SL — $coin',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _SheetRow('Direction', _direction.toUpperCase(),
+                _direction == 'long' ? AppColors.brandGreen : AppColors.brandRed),
+            const SizedBox(height: 10),
+            _SheetRow('Entry (current)', s.formattedPrice, AppColors.brandBlue),
+            if (s.rawTakeProfit > 0) ...[
+              const SizedBox(height: 10),
+              _SheetRow('Take Profit', s.takeProfit, AppColors.brandGreen),
+            ],
+            if (s.rawStopLoss > 0) ...[
+              const SizedBox(height: 10),
+              _SheetRow('Stop Loss', s.stopLoss, AppColors.brandRed),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C896),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.pop(sheetCtx);
+                  _createAlert();
+                },
+                child: const Text(
+                  'Confirm & Set Alert',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createAlert() async {
+    setState(() => _loading = true);
+    try {
+      await AlertsRepo.instance.createAlert(
+        symbol: '${widget.coin}USDT',
+        entryPrice: widget.signal.price,
+        takeProfitPrice: widget.signal.rawTakeProfit,
+        stopLossPrice: widget.signal.rawStopLoss,
+        direction: _direction,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline_rounded,
+                    color: Color(0xFF00C896), size: 18),
+                const SizedBox(width: 10),
+                Text(
+                  'Alert set for ${widget.coin} · TP ${widget.signal.takeProfit} / SL ${widget.signal.stopLoss}',
+                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF1A1D24),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to set alert: $e',
+                style: const TextStyle(fontSize: 13, color: Colors.white)),
+            backgroundColor: AppColors.brandRed.withValues(alpha: 0.9),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+
+class _SheetRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _SheetRow(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
         Text(value,
             style: TextStyle(
               fontSize: 13,
