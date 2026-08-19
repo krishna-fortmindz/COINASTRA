@@ -160,9 +160,7 @@ class SignalData {
       indicators: json['indicators'] != null
           ? IndicatorsData.fromJson(json['indicators'] as Map<String, dynamic>)
           : IndicatorsData.empty,
-      aiInsight: json['aiInsight'] != null
-          ? AiInsightData.fromJson(json['aiInsight'] as Map<String, dynamic>)
-          : AiInsightData.empty,
+      aiInsight: _parseAiInsight(json),
       leverage: json['leverage'] != null
           ? LeverageData.fromJson(json['leverage'] as Map<String, dynamic>)
           : LeverageData.empty,
@@ -175,6 +173,16 @@ class SignalData {
   }
 
   static String formatPriceStatic(dynamic v) => _formatPrice(v);
+
+  static AiInsightData _parseAiInsight(Map<String, dynamic> json) {
+    final raw = json['aiInsight'] ??
+        json['ai_insight'] ??
+        json['insight'] ??
+        json['aiInsights'] ??
+        json['signalInsight'];
+    if (raw is Map<String, dynamic>) return AiInsightData.fromJson(raw);
+    return AiInsightData.empty;
+  }
 
   static String _formatPrice(dynamic v) {
     if (v == null) return '—';

@@ -1737,7 +1737,7 @@ STRIPE_ELITE_PRICE_ID=
 
 deploy both--
 
-1)flutter build web --release --base-href /app/
+1)flutter build web --release --base-href /app/ or flutter build web --release --base-href /app/ --dart-define=API_BASE_URL=https://coinastra.duckdns.org
 2)cp -r build/web/. ../nextjs-app/public/app/            
 
 cd ..

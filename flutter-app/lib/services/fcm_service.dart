@@ -75,27 +75,44 @@ class FcmService {
       final opts = js.JsObject.jsify({
         'body': body,
         'icon': '/icons/Icon-192.png',
+        'badge': '/icons/Icon-192.png',
+        'tag': 'coinpilot-alert',
+        'renotify': true,
       });
 
-      // Use service worker showNotification — works on mobile web & desktop
-      final sw = js.context['navigator']['serviceWorker'] as js.JsObject?;
-      final ready = sw?['ready'];
-      if (ready != null) {
-        (ready as js.JsObject).callMethod('then', [
-          js.JsFunction.withThis((thisArg, reg) {
-            try {
-              (reg as js.JsObject).callMethod('showNotification', [title, opts]);
-            } catch (_) {}
-          }),
-        ]);
+      final navigator = js.context['navigator'];
+      if (navigator == null) return;
+
+      final swContainer = navigator['serviceWorker'];
+      if (swContainer == null) {
+        _directNotification(title, opts);
         return;
       }
 
-      // Fallback: direct Notification constructor (desktop only)
-      js.JsObject(
-        js.context['Notification'] as js.JsFunction,
-        [title, opts],
-      );
+      final ready = swContainer['ready'];
+      if (ready == null) {
+        _directNotification(title, opts);
+        return;
+      }
+
+      // JsFunction.withThis: first param = JS `this`, second = resolved value.
+      // For a Promise .then callback `this` is undefined; reg is the registration.
+      (ready as js.JsObject).callMethod('then', [
+        js.JsFunction.withThis((_, dynamic reg) {
+          try {
+            (reg as js.JsObject).callMethod('showNotification', [title, opts]);
+          } catch (_) {
+            _directNotification(title, opts);
+          }
+        }),
+      ]);
+    } catch (_) {}
+  }
+
+  static void _directNotification(String title, js.JsObject opts) {
+    try {
+      final notifCtor = js.context['Notification'] as js.JsFunction?;
+      if (notifCtor != null) js.JsObject(notifCtor, [title, opts]);
     } catch (_) {}
   }
 
