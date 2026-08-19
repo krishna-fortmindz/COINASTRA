@@ -8,9 +8,12 @@ class EndPoints {
   static const String _env =
       String.fromEnvironment('ENV', defaultValue: 'prod');
 
-  static const String baseUrl = _env == 'dev'
-      ? 'http://10.255.251.45:5000'
-      : 'https://coinastra.duckdns.org';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: _env == 'dev'
+        ? 'http://10.255.251.45:5000'
+        : 'https://coinastra.duckdns.org',
+  );
 
   static const String apiBaseUrl = '$baseUrl/api/v1';
   static const String dashboardBaseUrl = '$apiBaseUrl/dashboard';

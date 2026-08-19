@@ -17,6 +17,9 @@ class _MarketMemoryScreenState extends ConsumerState<MarketMemoryScreen> {
   final _searchCtrl = TextEditingController();
   bool _searching = false;
   String _query = '';
+  // Tracks whether the user explicitly picked a coin on this screen.
+  // When true, the global selectedCoin no longer overrides memorySymbol.
+  bool _hasLocalSelection = false;
 
   @override
   void dispose() {
@@ -27,6 +30,7 @@ class _MarketMemoryScreenState extends ConsumerState<MarketMemoryScreen> {
   void _selectCoin(String symbol) {
     final upper = symbol.trim().toUpperCase();
     if (upper.isNotEmpty) {
+      _hasLocalSelection = true;
       ref.read(memorySymbolProvider.notifier).state = upper;
     }
     setState(() {
@@ -38,12 +42,16 @@ class _MarketMemoryScreenState extends ConsumerState<MarketMemoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Sync with global search selection
+    // Sync with global selection only when the user hasn't made a local pick.
+    // Without this guard, the microtask that runs after _selectCoin would
+    // immediately revert memorySymbol back to the global coin.
     final globalCoin = ref.watch(selectedCoinProvider);
-    final currentMemoryCoin = ref.read(memorySymbolProvider);
-    if (currentMemoryCoin != globalCoin) {
-      Future.microtask(
-          () => ref.read(memorySymbolProvider.notifier).state = globalCoin);
+    if (!_hasLocalSelection) {
+      final currentMemoryCoin = ref.read(memorySymbolProvider);
+      if (currentMemoryCoin != globalCoin) {
+        Future.microtask(
+            () => ref.read(memorySymbolProvider.notifier).state = globalCoin);
+      }
     }
 
     final symbol = ref.watch(memorySymbolProvider);

@@ -510,45 +510,108 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   }
 
   Widget _buildChartCard(String chartUrl) {
-    final image = Image.network(
-      chartUrl,
-      fit: BoxFit.contain,
-      width: double.infinity,
-      loadingBuilder: (_, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          height: 200,
-          color: AppColors.bgCard,
-          child: Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                value: progress.expectedTotalBytes != null
-                    ? progress.cumulativeBytesLoaded /
-                        progress.expectedTotalBytes!
-                    : null,
-                color: AppColors.brandGreen,
-              ),
-            ),
-          ),
-        );
-      },
-      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-    );
+    final screen = MediaQuery.of(context).size;
+    final isDesktop = screen.width >= 700;
+    final chartHeight = isDesktop
+        ? (screen.height * 0.66).clamp(380.0, 680.0)
+        : 210.0;
 
-    return GlassCard(
-      padding: EdgeInsets.zero,
+    return Container(
+      height: chartHeight,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.bgCard,
+        border: Border.all(
+          color: AppColors.brandGreen.withAlpha(25),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandGreen.withAlpha(8),
+            blurRadius: 24,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15),
         child: Stack(
+          fit: StackFit.expand,
           children: [
             InteractiveViewer(
-              minScale: 1,
-              maxScale: 5,
-              child: image,
+              minScale: 0.8,
+              maxScale: 6,
+              child: Image.network(
+                chartUrl,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: AppColors.bgCard,
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                                  progress.expectedTotalBytes!
+                              : null,
+                          color: AppColors.brandGreen,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
             ),
+            // Top gradient bar with label
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withAlpha(150),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(14, 12, 46, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.brandGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    const Text(
+                      'Technical Chart',
+                      style: TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Fullscreen button
             Positioned(
               top: 8,
               right: 8,
@@ -556,11 +619,13 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                 onTap: () => _showFullscreenChart(context, chartUrl),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(6),
+                    color: Colors.black.withAlpha(140),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withAlpha(20)),
                   ),
                   padding: const EdgeInsets.all(5),
-                  child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
+                  child: const Icon(Icons.fullscreen_rounded,
+                      color: Colors.white, size: 18),
                 ),
               ),
             ),
@@ -573,33 +638,39 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   void _showFullscreenChart(BuildContext context, String chartUrl) {
     showDialog(
       context: context,
-      barrierColor: Colors.black87,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(12),
+      barrierColor: Colors.black.withAlpha(230),
+      builder: (_) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
         child: Stack(
           children: [
-            InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 8,
-              child: Image.network(
-                chartUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 10,
+                child: Image.network(
+                  chartUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
               ),
             ),
             Positioned(
-              top: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
+              top: 16,
+              right: 16,
+              child: SafeArea(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(20),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: Colors.white.withAlpha(30)),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.close,
+                        color: Colors.white, size: 22),
                   ),
-                  padding: const EdgeInsets.all(6),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -693,7 +764,9 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   Widget _buildAiInsightCard(SignalData s) {
     final insight = s.aiInsight;
     final hasInsight = insight.primaryReason.isNotEmpty ||
-        insight.nearTermOutlook.isNotEmpty;
+        insight.nearTermOutlook.isNotEmpty ||
+        insight.secondaryReason.isNotEmpty ||
+        insight.fundamentalContext.isNotEmpty;
 
     if (!hasInsight) {
       return GlassCard(
